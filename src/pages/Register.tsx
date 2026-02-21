@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // useEffect මෙතනට අනිවාර්යයෙන්ම ඕනේ
 import { Lock, Mail, User, Phone, MapPin, Briefcase, ArrowRight, Shield, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
