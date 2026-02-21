@@ -4,6 +4,7 @@ import { softwareService } from '@/services/mockSoftwareService';
 import type { Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 interface SoftwareDetailProps {
   softwareId: string;
@@ -198,6 +199,32 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                   Buy Now
                 </button>
               )}
+
+              {/* --- අලුතින් එක් කළ Firebase Setup කොටස --- */}
+    {/* මෙතනදී අපි බලනවා User ලොග් වෙලාද සහ මෘදුකාංගයට Firebase ඕනෙද කියලා */}
+    {isAuthenticated && software.requiresFirebase && (
+      <div className="mt-4 pt-4 border-t border-[rgba(244,246,255,0.08)]">
+        <p className="text-[10px] text-[#A7ACB8] uppercase tracking-wider mb-3 text-center font-bold">
+          Database Setup
+        </p>
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={(response) => {
+              console.log("Firebase Setup Started", response);
+              // මෙතනට handleFirebaseSetup function එක පස්සේ ලියමු
+            }}
+            onError={() => toast({ title: 'Error', description: 'Google Login Failed' })}
+            theme="filled_blue"
+            shape="pill"
+            text="continue_with"
+          />
+        </div>
+        <p className="text-[11px] text-[#A7ACB8] mt-2 text-center leading-relaxed">
+          Click above to create your private Firebase project automatically.
+        </p>
+      </div>
+    )}
+    {/* ------------------------------------------ */}
 
               {/* Stats */}
               <div className="mt-6 pt-6 border-t border-[rgba(244,246,255,0.08)] space-y-3">
