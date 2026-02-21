@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Lock, Mail, User, Phone, MapPin, Briefcase, ArrowRight, Shield, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from "jwt-decode";
+import { FcGoogle } from 'react-icons/fc';
+
 
 interface RegisterProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
@@ -24,6 +28,19 @@ export default function Register({ onNavigate }: RegisterProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { register, sendOTP } = useAuth();
   const { toast } = useToast();
+
+  const handleGoogleSuccess = (credentialResponse: any) => {
+    const decoded: any = jwtDecode(credentialResponse.credential);
+    setFormData({
+        ...formData,
+        fullName: decoded.name || '',
+        email: decoded.email || '',
+    });
+    toast({
+        title: 'Google Connected',
+        description: 'Name and Email imported. Please fill other details.',
+    });
+};
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +123,22 @@ export default function Register({ onNavigate }: RegisterProps) {
 
   const renderDetailsForm = () => (
     <form onSubmit={handleSendOTP} className="space-y-4">
+
+      {/* Google Button Section */}
+<div className="mb-6">
+    <GoogleLogin
+        onSuccess={handleGoogleSuccess}
+        onError={() => toast({ title: 'Error', description: 'Google Login Failed', variant: 'destructive' })}
+        useOneTap
+        theme="filled_black"
+        shape="pill"
+        width="100%"
+    />
+    <div className="relative mt-6 mb-4">
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[rgba(244,246,255,0.1)]"></div></div>
+        <div className="relative flex justify-center text-xs uppercase"><span className="px-2 bg-[#0B0E16] text-[#A7ACB8]">Or register manually</span></div>
+    </div>
+</div>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[#F4F6FF] mb-2">
