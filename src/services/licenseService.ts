@@ -26,4 +26,10 @@ export const generateAndSaveLicense = async (userId: string, fullName: string) =
     console.error("License saving error:", error);
     return null;
   }
+
+};
+
+// අන්න අර කලින් ආපු Error එක නිවෙන්න මෙන්න මේ පේළි ටික අන්තිමටම පේස්ට් කරන්න
+export const licenseService = {
+  generateAndSaveLicense: generateAndSaveLicense
 };
