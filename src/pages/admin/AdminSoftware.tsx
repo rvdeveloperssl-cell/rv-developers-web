@@ -32,6 +32,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     imageUrl: '',
     systemRequirements: '',
     isFree: false,
+    requiresFirebase: false,
     features: [''],
   });
 
@@ -109,6 +110,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       imageUrl: '',
       systemRequirements: '',
       isFree: false,
+      requiresFirebase: false,
       features: [''],
     });
     setEditingSoftware(null);
@@ -226,6 +228,18 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                     />
                     <span className="text-sm">Free Software</span>
                   </label>
+                  {/* --- අලුතින් එක් කරන කොටස --- */}
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={formData.requiresFirebase}
+        onChange={(e) => setFormData({ ...formData, requiresFirebase: e.target.checked })}
+        className="rounded border-[rgba(244,246,255,0.2)] bg-[#05060B]"
+      />
+      <span className="text-sm text-[#F4F6FF]">Requires Firebase Setup</span>
+    </label>
+    {/* --------------------------- */}
+  </div>
                   {!formData.isFree && (
                     <div className="flex-grow">
                       <input
