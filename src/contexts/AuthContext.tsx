@@ -61,9 +61,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }) => {
     setIsLoading(true);
     try {
+      // 1. Browser එකේ හංගපු OTP එක ලබාගන්නවා
+      const savedOTP = sessionStorage.getItem('rv_temp_otp');
+
+      // 2. පාරිභෝගිකයා Form එකේ ගැහුව අංකය (data.otp) සහ savedOTP සමානද බලනවා
+      if (data.otp !== savedOTP) {
+        return { success: false, message: 'Invalid OTP code. Please try again.' };
+      }
+
+      // 3. OTP එක හරි නම් විතරක් Firebase/AuthService එකට register වෙන්න දත්ත යවනවා
       const result = await authService.register(data, data.otp);
       if (result.success && result.user) {
         setUser(result.user);
+        sessionStorage.removeItem('rv_temp_otp'); // වැඩේ ඉවර නිසා අංකය මකා දමනවා
       }
       return result;
     } finally {
@@ -82,11 +92,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const sendOTP = async (email: string) => {
-    return await authService.sendOTP(email);
+    try {
+      // 1. ඉලක්කම් 6ක OTP එකක් මෙහේදීම හදනවා
+      const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // 2. පස්සේ register වෙද්දී බලන්න මේක Browser එකේ තාවකාලිකව සඟවනවා
+      sessionStorage.setItem('rv_temp_otp', generatedOTP);
+
+      // 3. දැන් ඔයාගේ Google Script එකට Email එක සහ OTP එක යවනවා
+      const response = await fetch(import.meta.env.VITE_GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          email: email,
+          otp: generatedOTP 
+        }),
+      });
+
+      if (response.ok) {
+        return { success: true, message: 'OTP sent successfully!' };
+      }
+      return { success: false, message: 'Failed to send OTP email.' };
+    } catch (error) {
+      return { success: false, message: 'Network error occurred.' };
+    }
   };
 
   const verifyOTP = async (email: string, otp: string) => {
-    return await authService.verifyOTP(email, otp);
+    const savedOTP = sessionStorage.getItem('rv_temp_otp');
+    if (otp === savedOTP) {
+      return { success: true, message: 'Verified!' };
+    }
+    return { success: false, message: 'Invalid code.' };
   };
 
   const refreshUser = () => {
