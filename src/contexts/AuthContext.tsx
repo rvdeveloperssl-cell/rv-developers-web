@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User } from '@/types';
-import { authService } from '@/services/mockAuthService';
+import { authService } from '@/services/authService';
 
 interface AuthContextType {
   user: User | null;
