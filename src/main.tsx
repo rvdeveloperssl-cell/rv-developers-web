@@ -4,8 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-// .env.local එකෙන් Client ID එක ලබා ගැනීම
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID = "966245396916-e104ocr1f6h277d59028h2n0hg644n8c.apps.googleusercontent.com";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
