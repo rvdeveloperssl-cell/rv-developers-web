@@ -239,7 +239,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       <span className="text-sm text-[#F4F6FF]">Requires Firebase Setup</span>
     </label>
     {/* --------------------------- */}
-  </div>
+  
                   {!formData.isFree && (
                     <div className="flex-grow">
                       <input
