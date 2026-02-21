@@ -23,6 +23,31 @@ export default function Register({ onNavigate }: RegisterProps) {
     password: '',
     confirmPassword: '',
   });
+  // --- අලුතින් එකතු කරන කොටස ---
+  const [resendTimer, setResendTimer] = useState(60);
+
+  useEffect(() => {
+    let interval: any;
+    if (step === 'otp' && resendTimer > 0) {
+      interval = setInterval(() => setResendTimer(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, resendTimer]);
+
+  const handleResend = async () => {
+    if (resendTimer > 0) return;
+    setIsLoading(true);
+    try {
+      const result = await sendOTP(formData.email);
+      if (result.success) {
+        toast({ title: 'OTP Resent', description: 'Please check your email.' });
+        setResendTimer(60); // Timer එක Reset කරනවා
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // ----------------------------
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +87,7 @@ export default function Register({ onNavigate }: RegisterProps) {
           title: 'OTP Sent',
           description: 'Check your email for the verification code.',
         });
+        setResendTimer(60); // අලුතින් OTP යවද්දී Timer එක 60 කරන්න
         setStep('otp');
       } else {
         toast({
@@ -348,6 +374,19 @@ export default function Register({ onNavigate }: RegisterProps) {
           </>
         )}
       </button>
+
+      {/* --- Resend Section එක මෙතනට දාන්න --- */}
+      <div className="text-center mt-4">
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={resendTimer > 0 || isLoading}
+          className="text-sm text-[#4F46E5] disabled:text-[#A7ACB8] font-medium hover:underline transition-all"
+        >
+          {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend Code'}
+        </button>
+      </div>
+      {/* ------------------------------------- */}
 
       <button
         type="button"
