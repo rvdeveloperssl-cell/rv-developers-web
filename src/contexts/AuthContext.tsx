@@ -94,30 +94,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const sendOTP = async (email: string) => {
-    try {
-      // 1. ඉලක්කම් 6ක OTP එකක් මෙහේදීම හදනවා
-      const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // 2. පස්සේ register වෙද්දී බලන්න මේක Browser එකේ තාවකාලිකව සඟවනවා
-      sessionStorage.setItem('rv_temp_otp', generatedOTP);
+  try {
+    // 1. එකම අංකය මෙතනදී හදනවා
+    const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // 2. Browser එකේ සේව් කරනවා
+    sessionStorage.setItem('rv_temp_otp', generatedOTP);
 
-      // 3. දැන් ඔයාගේ Google Script එකට Email එක සහ OTP එක යවනවා
-      const response = await fetch(import.meta.env.VITE_GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          email: email,
-          otp: generatedOTP 
-        }),
-      });
+    // 3. දැන් Service එකට ඒ OTP එකම යවනවා (දැන් Service එක ඇතුළේ අලුතින් හදන්නේ නැහැ)
+    const result = await authService.sendOTP(email, generatedOTP);
 
-      if (response.ok) {
-        return { success: true, message: 'OTP sent successfully!' };
-      }
-      return { success: false, message: 'Failed to send OTP email.' };
-    } catch (error) {
-      return { success: false, message: 'Network error occurred.' };
-    }
-  };
+    return result;
+  } catch (error) {
+    return { success: false, message: 'Network error occurred.' };
+  }
+};
 
   const verifyOTP = async (email: string, otp: string) => {
     const savedOTP = sessionStorage.getItem('rv_temp_otp');
