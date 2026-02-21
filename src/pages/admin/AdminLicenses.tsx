@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, Copy, Ban, CheckCircle, RefreshCw } from 'lucide-react';
-import { licenseService } from '@/services/mockLicenseService';
+import { licenseService } from '@/services/licenseService';
 import { softwareService } from '@/services/mockSoftwareService';
 import { mockUsers } from '@/data/mockData';
 import type { License, Software } from '@/types';
