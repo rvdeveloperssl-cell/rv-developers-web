@@ -30,11 +30,16 @@ async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: 
   const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
   try {
-    await fetch(SCRIPT_URL, {
+    // URLSearchParams පාවිච්චි කිරීම වඩාත් සාර්ථකයි Google Apps Script සඳහා
+    const formData = new URLSearchParams();
+    formData.append('email', email);
+    formData.append('otp', otp);
+
+    fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, otp }), // මෙතනට එන්නේ Context එකෙන් දෙන OTP එක
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
     });
 
     OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
@@ -77,10 +82,13 @@ async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: 
       delete OTP_STORE[data.email];
       return { success: true, user: userData, message: 'Registration successful!' };
     } catch (error: any) {
-      let msg = "Registration failed.";
-      if (error.code === 'auth/email-already-in-use') msg = "Email already in use.";
-      return { success: false, message: msg };
-    }
+  console.error("FULL FIREBASE ERROR:", error); // මේකෙන් තමයි ඇත්තම ලෙඩේ අහුවෙන්නේ
+  let msg = "Registration failed.";
+  if (error.code === 'auth/email-already-in-use') msg = "Email already in use.";
+  if (error.code === 'auth/weak-password') msg = "Password is too weak.";
+  if (error.code === 'auth/invalid-email') msg = "Invalid email.";
+  return { success: false, message: msg + " (" + (error.message || "") + ")" };
+}
   }
 
   // --- Login Logic ---
