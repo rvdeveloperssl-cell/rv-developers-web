@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { softwareService } from '@/services/mockSoftwareService';
-import { licenseService } from '@/services/mockLicenseService';
+import { licenseService } from '@/services/licenseService';
 import { paymentService } from '@/services/mockPaymentService';
 import { mockUsers, mockActivityLogs } from '@/data/mockData';
 import type { Purchase } from '@/types';
