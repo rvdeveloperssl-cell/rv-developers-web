@@ -202,7 +202,7 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                 </button>
               )}
 
-              /* --- Sidebar එකේ Price Card එක ඇතුළත Setup Firebase කොටස --- */
+              
 {isAuthenticated && software.requiresFirebase && (
   <div className="mt-4 pt-4 border-t border-[rgba(244,246,255,0.08)]">
     <p className="text-[10px] text-[#A7ACB8] uppercase tracking-wider mb-3 text-center font-bold">
