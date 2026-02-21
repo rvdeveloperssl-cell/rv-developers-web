@@ -108,6 +108,10 @@ class AuthService {
   async logout() {
     await signOut(auth);
   }
+  // දැනට ලොග් වෙලා ඉන්න User ගේ විස්තර ගන්න මේක ඕනේ
+  getCurrentUser(): any {
+    return auth.currentUser;
+  }
 }
 
 export const authService = new AuthService();
