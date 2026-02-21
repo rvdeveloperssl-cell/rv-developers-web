@@ -30,24 +30,22 @@ async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: 
   const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
   try {
-    // URLSearchParams පාවිච්චි කිරීම වඩාත් සාර්ථකයි Google Apps Script සඳහා
-    const formData = new URLSearchParams();
-    formData.append('email', email);
-    formData.append('otp', otp);
-
+    // Google Script එක JSON බලාපොරොත්තු වන නිසා නැවත JSON යවමු
     fetch(SCRIPT_URL, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString(),
+      mode: 'no-cors', 
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }), 
     });
 
+    // මෙතන තමයි වැදගත්ම කොටස! 
+    // අපි fetch එක ඉවර වෙනකම් ඉන්නේ නැහැ (no-cors නිසා ඉන්න බැහැ)
+    // ඒ නිසා කෙලින්ම success දෙනවා
     OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
-    console.log(`OTP for ${email}: ${otp}`); 
-    
     return { success: true, message: 'OTP sent successfully!' };
   } catch (error) {
-    return { success: false, message: 'Failed to connect to security service.' };
+    return { success: false, message: 'Failed to send OTP.' };
   }
 }
 
