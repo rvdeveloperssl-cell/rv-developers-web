@@ -25,32 +25,26 @@ export interface RegisterData {
 class AuthService {
   // authService.ts ඇතුළත...
 
-  async sendOTP(email: string): Promise<{ success: boolean; message: string; otp?: string }> {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+  // authService.ts ඇතුළත sendOTP function එක මෙහෙම වෙනස් කරන්න
+async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
+  const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
-    try {
-      // Google Script එකට data යවනවා
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors', // Google Script වලට අත්‍යවශ්‍යයි
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
-      });
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }), // මෙතනට එන්නේ Context එකෙන් දෙන OTP එක
+    });
 
-      // no-cors නිසා response එක check කරන්න බැහැ, 
-      // ඒ නිසා අපි සාර්ථකයි කියලා උපකල්පනය කරලා OTP එක store කරනවා.
-      OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
-      
-      // ලින්ක් එක URL එකේ පෙනුණාට කමක් නැති නිසා console එකේ දානවා (Testing වලට ලේසියි)
-      console.log(`OTP for ${email}: ${otp}`); 
-      
-      return { success: true, message: 'OTP sent successfully!', otp };
-    } catch (error) {
-      console.error("OTP Error:", error);
-      return { success: false, message: 'Failed to connect to security service.' };
-    }
+    OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+    console.log(`OTP for ${email}: ${otp}`); 
+    
+    return { success: true, message: 'OTP sent successfully!' };
+  } catch (error) {
+    return { success: false, message: 'Failed to connect to security service.' };
   }
+}
 
   // --- Register Logic (Firebase) ---
   async register(data: RegisterData, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
