@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { softwareService } from '@/services/mockSoftwareService';
-import { licenseService } from '@/services/mockLicenseService';
+import { licenseService } from '@/services/licenseService';
 import { paymentService } from '@/services/mockPaymentService';
 import type { Software, License, Purchase, Invoice } from '@/types';
 import { useToast } from '@/hooks/use-toast';
