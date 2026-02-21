@@ -1,6 +1,6 @@
 import type { Purchase, Invoice } from '@/types';
 import { mockPurchases, mockInvoices, mockSoftware } from '@/data/mockData';
-import { licenseService } from './mockLicenseService';
+import { licenseService } from './licenseService';
 
 class MockPaymentService {
   private generateInvoiceNumber(): string {
