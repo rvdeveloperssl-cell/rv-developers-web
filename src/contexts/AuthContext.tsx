@@ -64,22 +64,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 1. Browser එකේ හංගපු OTP එක ලබාගන්නවා
       const savedOTP = sessionStorage.getItem('rv_temp_otp');
 
-      // 2. පාරිභෝගිකයා Form එකේ ගැහුව අංකය (data.otp) සහ savedOTP සමානද බලනවා
-      if (data.otp !== savedOTP) {
-        return { success: false, message: 'Invalid OTP code. Please try again.' };
-      }
-
-      // 3. OTP එක හරි නම් විතරක් Firebase/AuthService එකට register වෙන්න දත්ත යවනවා
-      const result = await authService.register(data, data.otp);
-      if (result.success && result.user) {
-        setUser(result.user);
-        sessionStorage.removeItem('rv_temp_otp'); // වැඩේ ඉවර නිසා අංකය මකා දමනවා
-      }
-      return result;
-    } finally {
-      setIsLoading(false);
+    // 1. මුලින්ම Frontend එකේදී OTP එක චෙක් කරනවා
+    if (data.otp !== savedOTP) {
+      return { success: false, message: 'Invalid or expired OTP code.' };
     }
-  };
+
+    // 2. OTP එක හරි නම් විතරක් Service එකට යවනවා. 
+    // වැදගත්: මෙතනදී data.otp වෙනුවට Mock service එකට ඕන කරන විදිහට දත්ත යවන්න.
+    const result = await authService.register(data, data.otp); 
+    
+    if (result.success) {
+      setUser(result.user);
+      sessionStorage.removeItem('rv_temp_otp');
+    }
+    return result;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const logout = async () => {
     setIsLoading(true);
