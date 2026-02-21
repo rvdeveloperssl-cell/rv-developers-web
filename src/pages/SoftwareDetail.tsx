@@ -4,7 +4,9 @@ import { softwareService } from '@/services/mockSoftwareService';
 import type { Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google'; // මෙහෙම වෙනස් කරන්න
+import { Shield, Loader2 } from 'lucide-react';
+
 
 interface SoftwareDetailProps {
   softwareId: string;
@@ -200,30 +202,31 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                 </button>
               )}
 
-              {/* --- අලුතින් එක් කළ Firebase Setup කොටස --- */}
-    {/* මෙතනදී අපි බලනවා User ලොග් වෙලාද සහ මෘදුකාංගයට Firebase ඕනෙද කියලා */}
-    {isAuthenticated && software.requiresFirebase && (
-      <div className="mt-4 pt-4 border-t border-[rgba(244,246,255,0.08)]">
-        <p className="text-[10px] text-[#A7ACB8] uppercase tracking-wider mb-3 text-center font-bold">
-          Database Setup
-        </p>
-        <div className="flex justify-center">
-          <GoogleLogin
-            onSuccess={(response) => {
-              console.log("Firebase Setup Started", response);
-              // මෙතනට handleFirebaseSetup function එක පස්සේ ලියමු
-            }}
-            onError={() => toast({ title: 'Error', description: 'Google Login Failed' })}
-            theme="filled_blue"
-            shape="pill"
-            text="continue_with"
-          />
-        </div>
-        <p className="text-[11px] text-[#A7ACB8] mt-2 text-center leading-relaxed">
-          Click above to create your private Firebase project automatically.
-        </p>
-      </div>
-    )}
+              /* --- Sidebar එකේ Price Card එක ඇතුළත Setup Firebase කොටස --- */
+{isAuthenticated && software.requiresFirebase && (
+  <div className="mt-4 pt-4 border-t border-[rgba(244,246,255,0.08)]">
+    <p className="text-[10px] text-[#A7ACB8] uppercase tracking-wider mb-3 text-center font-bold">
+      Required Database Setup
+    </p>
+    
+    <button
+      onClick={() => login()} // මෙන්න මෙතනින් තමයි අර popup එක එන්නේ
+      disabled={isSettingUp}
+      className="rv-btn-secondary w-full flex items-center justify-center gap-2 border-[#4F46E5] text-[#F4F6FF] hover:bg-[#4F46E5]/10 py-2.5 rounded-lg transition-all"
+    >
+      {isSettingUp ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <Shield className="w-4 h-4 text-[#4F46E5]" />
+      )}
+      {isSettingUp ? 'Connecting...' : 'Setup Private Firebase'}
+    </button>
+
+    <p className="text-[11px] text-[#A7ACB8] mt-3 text-center leading-relaxed px-2">
+      Link your Google account to create a secure, private database for this software.
+    </p>
+  </div>
+)}
     {/* ------------------------------------------ */}
 
               {/* Stats */}
