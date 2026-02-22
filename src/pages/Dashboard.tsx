@@ -33,35 +33,44 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [user]); // user වෙනස් වන විට දත්ත ලෝඩ් කරන්න
 
   const loadDashboardData = async () => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     
     setIsLoading(true);
     try {
-      const [licensesData, purchasesData, invoicesData, allSoftware] = await Promise.all([
+      // Promise.allSettled පාවිච්චි කිරීමෙන් එක සර්විස් එකක් ෆේල් වුණත් ඉතිරි ඒවා වැඩ කරයි
+      const results = await Promise.allSettled([
         licenseService.getUserLicenses(user.id),
         paymentService.getUserPurchases(user.id),
         paymentService.getUserInvoices(user.id),
         softwareService.getAllSoftware(),
       ]);
 
-      setLicenses(licensesData);
-      setPurchases(purchasesData);
-      setInvoices(invoicesData);
+      const licensesData = results[0].status === 'fulfilled' ? results[0].value : [];
+      const purchasesData = results[1].status === 'fulfilled' ? results[1].value : [];
+      const invoicesData = results[2].status === 'fulfilled' ? results[2].value : [];
+      const allSoftware = results[3].status === 'fulfilled' ? results[3].value : [];
+
+      setLicenses(Array.isArray(licensesData) ? licensesData : []);
+      setPurchases(Array.isArray(purchasesData) ? purchasesData : []);
+      setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
 
       const softwareMapData: Record<string, Software> = {};
-      allSoftware.forEach((s) => {
-        softwareMapData[s.id] = s;
-      });
+      if (Array.isArray(allSoftware)) {
+        allSoftware.forEach((s) => {
+          softwareMapData[s.id] = s;
+        });
+      }
       setSoftwareMap(softwareMapData);
+      
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load dashboard data',
-        variant: 'destructive',
-      });
+      console.error("Dashboard Load Error:", error);
+      // මෙතනදී ටෝස්ට් එක අයින් කළා User ට කරදර නොවෙන්න
     } finally {
       setIsLoading(false);
     }
@@ -75,32 +84,33 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     });
   };
 
+  // Stats ගණනය කිරීමේදී ආරක්ෂිත ක්‍රම පාවිච්චි කිරීම
   const stats = [
     {
       icon: Package,
       label: 'Purchased Software',
-      value: purchases.length,
+      value: purchases?.length || 0,
       color: 'bg-[rgba(79,70,229,0.15)] text-[#4F46E5]',
     },
     {
       icon: Key,
       label: 'Active Licenses',
-      value: licenses.filter((l) => l.status === 'active').length,
+      value: licenses?.filter((l) => l.status === 'active').length || 0,
       color: 'bg-green-500/15 text-green-400',
     },
     {
       icon: CreditCard,
       label: 'Total Spent',
-      value: `LKR ${purchases
+      value: `LKR ${(purchases || [])
         .filter((p) => p.paymentStatus === 'verified')
-        .reduce((sum, p) => sum + p.amount, 0)
+        .reduce((sum, p) => sum + (p.amount || 0), 0)
         .toLocaleString()}`,
       color: 'bg-[rgba(124,58,237,0.15)] text-[#7C3AED]',
     },
     {
       icon: FileText,
       label: 'Invoices',
-      value: invoices.length,
+      value: invoices?.length || 0,
       color: 'bg-[rgba(244,246,255,0.08)] text-[#A7ACB8]',
     },
   ];
