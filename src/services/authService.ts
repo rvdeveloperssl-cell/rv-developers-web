@@ -26,7 +26,7 @@ class AuthService {
       // 2. දත්ත ටික URL එකේ අගට එකතු කරලා (Query String) Request එක යවනවා
       // no-cors වලදී වඩාත්ම සාර්ථක ක්‍රමය මේකයි
       fetch(`${SCRIPT_URL}?${params.toString()}`, {
-        method: 'POST', // Google Script එකේ doPost හෝ doGet දෙකටම මේක අහුවෙනවා
+        method: 'GET', // Google Script එකේ doPost හෝ doGet දෙකටම මේක අහුවෙනවා
         mode: 'no-cors',
         cache: 'no-cache',
       });
