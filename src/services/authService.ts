@@ -9,7 +9,7 @@ const OTP_STORE: Record<string, { otp: string; expiresAt: number }> = {};
 class AuthService {
   
   // --- OTP යවන කොටස (Google Script එක හරහා) ---
-  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
+ async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
     const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
     if (!SCRIPT_URL) {
@@ -18,25 +18,23 @@ class AuthService {
     }
 
     try {
-      // මෙතනදී URLSearchParams වෙනුවට JSON Body එකක් පාවිච්චි කරමු
-      // මොකද ඔයාගේ Google Script එකේ JSON කියවන්න Logic එක අපි දැම්මා
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors', // Google Script වලට මේක අනිවාර්යයි
+      // 1. URL parameters විදිහට දත්ත සකස් කරගන්නවා
+      const params = new URLSearchParams();
+      params.append('email', email);
+      params.append('otp', otp);
+
+      // 2. දත්ත ටික URL එකේ අගට එකතු කරලා (Query String) Request එක යවනවා
+      // no-cors වලදී වඩාත්ම සාර්ථක ක්‍රමය මේකයි
+      fetch(`${SCRIPT_URL}?${params.toString()}`, {
+        method: 'POST', // Google Script එකේ doPost හෝ doGet දෙකටම මේක අහුවෙනවා
+        mode: 'no-cors',
         cache: 'no-cache',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email: email, 
-          otp: otp 
-        }),
       });
 
-      // Local store එක update කිරීම
+      // 3. පසුව Verify කරගැනීමට Local Memory එකේ OTP එක තබාගන්නවා
       OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
       
-      console.log("OTP Request Sent to Script:", { email, otp }); 
+      console.log("OTP Request Triggered for:", { email, otp }); 
       return { success: true, message: 'OTP sent successfully!' };
     } catch (error) {
       console.error("OTP Fetch Error:", error);
