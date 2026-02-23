@@ -68,84 +68,69 @@ export default function Register({ onNavigate }: RegisterProps) {
 };
 
   const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Passwords do not match',
-        variant: 'destructive',
-      });
-      return;
-    }
+  e.preventDefault();
+  
+  if (formData.password !== formData.confirmPassword) {
+    toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
+    return;
+  }
 
-    setIsLoading(true);
-    try {
-      const result = await sendOTP(formData.email);
-      if (result.success) {
-        toast({
-          title: 'OTP Sent',
-          description: 'Check your email for the verification code.',
-        });
-        setResendTimer(60); // අලුතින් OTP යවද්දී Timer එක 60 කරන්න
-        setStep('otp');
-      } else {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to send OTP',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  try {
+    // අහඹු අංක 6ක OTP එකක් හදනවා
+    const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // authService එකේ sendOTP එකට email එක සහ හදපු OTP එක යවනවා
+    const result = await sendOTP(formData.email, generatedOTP); 
+    
+    if (result.success) {
+      toast({ title: 'OTP Sent', description: 'Check your email for the code.' });
+      setResendTimer(60);
+      setStep('otp');
+    } else {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
-  };
+  } catch (error) {
+    toast({ title: 'Error', description: 'Failed to send OTP', variant: 'destructive' });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      const result = await register({
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        nic: formData.nic,
-        address: formData.address,
-        companyName: formData.companyName,
-        password: formData.password,
-        otp,
+  try {
+    // අපි authService එකේ register(data, otp) විදියටයි parameters හදලා තියෙන්නේ
+    // ඒ නිසා formData එක සම්පූර්ණයෙන්ම සහ otp එක වෙනම යවනවා
+    const result = await register(formData, otp);
+
+    if (result.success) {
+      toast({
+        title: 'Account Created!',
+        description: 'Your account has been successfully created in MySQL.',
       });
-
-      if (result.success) {
-        toast({
-          title: 'Welcome!',
-          description: 'Your account has been created successfully.',
-        });
-        onNavigate('dashboard');
-      } else {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+      // Register වුණාට පස්සේ කෙලින්ම Dashboard යන්නේ නැතුව 
+      // Login පේජ් එකට යවන එක ආරක්ෂිතයි (පස්සේ Login වෙන්න පුළුවන්ද බලන්න)
+      onNavigate('login'); 
+    } else {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred',
+        description: result.message,
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } catch (error) {
+    toast({
+      title: 'Error',
+      description: 'An unexpected error occurred during registration.',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const renderDetailsForm = () => (
     <form onSubmit={handleSendOTP} className="space-y-4">
