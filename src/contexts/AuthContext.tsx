@@ -31,10 +31,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
+  const currentUser = authService.getCurrentUser();
+  if (currentUser) {
     setUser(currentUser);
-    setIsLoading(false);
-  }, []);
+  }
+  setIsLoading(false);
+}, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
