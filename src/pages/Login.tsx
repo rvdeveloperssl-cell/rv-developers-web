@@ -20,13 +20,21 @@ export default function Login({ onNavigate }: LoginProps) {
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
+      // අපි හදාගත්ත අලුත් authService එකට Object එකක් විදියට දත්ත යවනවා
+      const result = await login({ email, password });
+
       if (result.success) {
         toast({
           title: 'Welcome back!',
           description: 'You have successfully logged in.',
         });
-        onNavigate('dashboard');
+
+        // Backend එකෙන් එන User Role එක අනුව යවන Dashboard එක තීරණය කරනවා
+        if (result.user && result.user.role === 'admin') {
+          onNavigate('admin-dashboard');
+        } else {
+          onNavigate('dashboard');
+        }
       } else {
         toast({
           title: 'Login Failed',
@@ -37,7 +45,7 @@ export default function Login({ onNavigate }: LoginProps) {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred.',
+        description: 'Server connection failed. Please try again later.',
         variant: 'destructive',
       });
     } finally {
