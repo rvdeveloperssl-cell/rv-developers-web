@@ -10,37 +10,28 @@ class AuthService {
   
   // --- OTP යවන කොටස (Google Script එක හරහා) ---
  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
-    const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+  const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
-    if (!SCRIPT_URL) {
-      console.error("SCRIPT_URL is missing! Check your .env file.");
-      return { success: false, message: 'Configuration error.' };
-    }
+  try {
+    // 1. URL එක සකස් කිරීම
+    const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
 
-    try {
-      // 1. URL parameters සකස් කරගන්නවා
-      const params = new URLSearchParams();
-      params.append('email', email);
-      params.append('otp', otp);
+    // 2. Fetch භාවිතයෙන් Request එක යැවීම (mode: 'no-cors' අනිවාර්යයි)
+    fetch(finalUrl, {
+      method: 'GET', // Google Script වලට GET එක ලෙහෙසියි
+      mode: 'no-cors',
+      cache: 'no-cache'
+    });
 
-      const finalUrl = `${SCRIPT_URL}?${params.toString()}`;
-
-      // 2. මෙන්න මෙතනයි වෙනස: 
-      // fetch වෙනුවට Image Object එකක් පාවිච්චි කරනවා.
-      // මේකෙන් CORS ප්‍රශ්නය මගහැරලා Google Script එකට දත්ත ටික පටවනවා.
-      const img = new Image();
-      img.src = finalUrl;
-
-      // 3. පසුව Verify කරගැනීමට Local Memory එකේ OTP එක තබාගන්නවා
-      OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
-      
-      console.log("OTP Sent via Beacon:", { email, otp }); 
-      return { success: true, message: 'OTP sent successfully!' };
-    } catch (error) {
-      console.error("OTP Error:", error);
-      return { success: false, message: 'Failed to send OTP.' };
-    }
+    // 3. Local Memory එකේ තියාගන්නවා Verify කරන්න
+    OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+    
+    return { success: true, message: 'OTP sent successfully!' };
+  } catch (error) {
+    console.error("OTP Send Error:", error);
+    return { success: false, message: 'Failed to send OTP.' };
   }
+}
 
   // --- Register Logic (MySQL Backend එකට) ---
   async register(data: any, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
