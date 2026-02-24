@@ -10,28 +10,31 @@ class AuthService {
   
   // --- OTP යවන කොටස (Google Script එක හරහා) ---
  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
-  const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+    // Me thiyenne oya dipu aluth URL eka
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7DbngzEnFdW8p2uwm5A1uWdsyULqEdlb3_JmHuMn2AdVtEOjJxH_nCfmieCPo7IujPA/exec";
 
-  try {
-    // 1. URL එක සකස් කිරීම
-    const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
+    try {
+      const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
+      
+      console.log("Sending OTP to:", email);
+      console.log("Request URL:", finalUrl);
 
-    // 2. Fetch භාවිතයෙන් Request එක යැවීම (mode: 'no-cors' අනිවාර්යයි)
-    fetch(finalUrl, {
-      method: 'GET', // Google Script වලට GET එක ලෙහෙසියි
-      mode: 'no-cors',
-      cache: 'no-cache'
-    });
+      // Fetch method eka use karamu (no-cors ekka)
+      fetch(finalUrl, {
+        method: 'GET',
+        mode: 'no-cors',
+        cache: 'no-cache'
+      });
 
-    // 3. Local Memory එකේ තියාගන්නවා Verify කරන්න
-    OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
-    
-    return { success: true, message: 'OTP sent successfully!' };
-  } catch (error) {
-    console.error("OTP Send Error:", error);
-    return { success: false, message: 'Failed to send OTP.' };
+      // Verification ekata local store eka update karanawa
+      OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+      
+      return { success: true, message: 'OTP sent successfully!' };
+    } catch (error) {
+      console.error("OTP Send Error:", error);
+      return { success: false, message: 'Failed to send OTP.' };
+    }
   }
-}
 
   // --- Register Logic (MySQL Backend එකට) ---
   async register(data: any, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
