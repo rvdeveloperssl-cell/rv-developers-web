@@ -18,26 +18,26 @@ class AuthService {
     }
 
     try {
-      // 1. URL parameters විදිහට දත්ත සකස් කරගන්නවා
+      // 1. URL parameters සකස් කරගන්නවා
       const params = new URLSearchParams();
       params.append('email', email);
       params.append('otp', otp);
 
-      // 2. දත්ත ටික URL එකේ අගට එකතු කරලා (Query String) Request එක යවනවා
-      // no-cors වලදී වඩාත්ම සාර්ථක ක්‍රමය මේකයි
-      fetch(`${SCRIPT_URL}?${params.toString()}`, {
-        method: 'GET', // Google Script එකේ doPost හෝ doGet දෙකටම මේක අහුවෙනවා
-        mode: 'no-cors',
-        cache: 'no-cache',
-      });
+      const finalUrl = `${SCRIPT_URL}?${params.toString()}`;
+
+      // 2. මෙන්න මෙතනයි වෙනස: 
+      // fetch වෙනුවට Image Object එකක් පාවිච්චි කරනවා.
+      // මේකෙන් CORS ප්‍රශ්නය මගහැරලා Google Script එකට දත්ත ටික පටවනවා.
+      const img = new Image();
+      img.src = finalUrl;
 
       // 3. පසුව Verify කරගැනීමට Local Memory එකේ OTP එක තබාගන්නවා
       OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
       
-      console.log("OTP Request Triggered for:", { email, otp }); 
+      console.log("OTP Sent via Beacon:", { email, otp }); 
       return { success: true, message: 'OTP sent successfully!' };
     } catch (error) {
-      console.error("OTP Fetch Error:", error);
+      console.error("OTP Error:", error);
       return { success: false, message: 'Failed to send OTP.' };
     }
   }
