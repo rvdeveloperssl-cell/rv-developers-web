@@ -10,23 +10,24 @@ class AuthService {
   
   // --- OTP යවන කොටස (Google Script එක හරහා) ---
  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
-  // ඔයාගේ අලුත්ම Script URL එක මෙතනට දාන්න
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaTr0J5qV37GpE8a9Ck49UPv79wxwfw1cQYr2GndDxlTpEDw4LomM8lzYgDuGB67jvSA/exec";
+  // 1. .env එකේ තියෙන URL එක ගන්න (Hardcode කරනවට වඩා ඒක හොඳයි)
+  const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
   try {
-    // POST request එකක් යවනවා JSON body එකක් එක්ක
-    fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors', // Google Script වලට අනිවාර්යයි
-      headers: {
-        'Content-Type': 'text/plain', // JSON දාන්න එපා CORS හිරවෙනවා, text/plain දාන්න
-      },
-      body: JSON.stringify({ email, otp })
+    // 2. URL එකට parameters එකතු කරන්න (GET request එකක් විදියට)
+    const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
+
+    // 3. අනිවාර්යයෙන් 'await' දාන්න. එතකොටයි request එක යනකම් browser එක ඉන්නේ.
+    await fetch(finalUrl, {
+      method: 'GET',
+      mode: 'no-cors', // Google Script වලට මේක ඕනේ
+      cache: 'no-cache'
     });
 
     // Verification එකට local storage එකේ තියාගන්නවා
     OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
     
+    console.log("OTP Sent Request Triggered");
     return { success: true, message: 'OTP sent successfully!' };
   } catch (error) {
     console.error("OTP Error:", error);
