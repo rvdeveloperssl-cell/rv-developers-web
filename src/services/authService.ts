@@ -10,31 +10,29 @@ class AuthService {
   
   // --- OTP යවන කොටස (Google Script එක හරහා) ---
  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
-    // Me thiyenne oya dipu aluth URL eka
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7DbngzEnFdW8p2uwm5A1uWdsyULqEdlb3_JmHuMn2AdVtEOjJxH_nCfmieCPo7IujPA/exec";
+  // ඔයාගේ අලුත්ම Script URL එක මෙතනට දාන්න
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7DbngzEnFdW8p2uwm5A1uWdsyULqEdlb3_JmHuMn2AdVtEOjJxH_nCfmieCPo7IujPA/exec";
 
-    try {
-      const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
-      
-      console.log("Sending OTP to:", email);
-      console.log("Request URL:", finalUrl);
+  try {
+    // POST request එකක් යවනවා JSON body එකක් එක්ක
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors', // Google Script වලට අනිවාර්යයි
+      headers: {
+        'Content-Type': 'text/plain', // JSON දාන්න එපා CORS හිරවෙනවා, text/plain දාන්න
+      },
+      body: JSON.stringify({ email, otp })
+    });
 
-      // Fetch method eka use karamu (no-cors ekka)
-      fetch(finalUrl, {
-        method: 'GET',
-        mode: 'no-cors',
-        cache: 'no-cache'
-      });
-
-      // Verification ekata local store eka update karanawa
-      OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
-      
-      return { success: true, message: 'OTP sent successfully!' };
-    } catch (error) {
-      console.error("OTP Send Error:", error);
-      return { success: false, message: 'Failed to send OTP.' };
-    }
+    // Verification එකට local storage එකේ තියාගන්නවා
+    OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+    
+    return { success: true, message: 'OTP sent successfully!' };
+  } catch (error) {
+    console.error("OTP Error:", error);
+    return { success: false, message: 'Failed to send OTP.' };
   }
+}
 
   // --- Register Logic (MySQL Backend එකට) ---
   async register(data: any, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
