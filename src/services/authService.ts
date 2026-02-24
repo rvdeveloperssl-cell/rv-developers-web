@@ -11,7 +11,7 @@ class AuthService {
   // --- OTP යවන කොටස (Google Script එක හරහා) ---
  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
   // ඔයාගේ අලුත්ම Script URL එක මෙතනට දාන්න
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7DbngzEnFdW8p2uwm5A1uWdsyULqEdlb3_JmHuMn2AdVtEOjJxH_nCfmieCPo7IujPA/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaTr0J5qV37GpE8a9Ck49UPv79wxwfw1cQYr2GndDxlTpEDw4LomM8lzYgDuGB67jvSA/exec";
 
   try {
     // POST request එකක් යවනවා JSON body එකක් එක්ක
