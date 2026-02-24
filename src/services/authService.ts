@@ -10,28 +10,39 @@ class AuthService {
   
   // --- OTP යවන කොටස (Google Script එක හරහා) ---
  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
-  // 1. .env එකේ තියෙන URL එක ගන්න (Hardcode කරනවට වඩා ඒක හොඳයි)
-  const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+  // Use the URL that you confirmed is working in the browser
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDBtNzkGL685gbIA6foL6FyD-JE7usPQ32mtw1_QuM4KZo_GkZvsXSvA3pQzc41psHXA/exec";
 
   try {
-    // 2. URL එකට parameters එකතු කරන්න (GET request එකක් විදියට)
     const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
+    
+    console.log("Starting OTP send process...");
+    console.log("Target URL:", finalUrl);
 
-    // 3. අනිවාර්යයෙන් 'await' දාන්න. එතකොටයි request එක යනකම් browser එක ඉන්නේ.
+    // Method 1: Using an Image object (Most reliable for Google Scripts to bypass CORS issues)
+    const img = new Image();
+    img.src = finalUrl;
+
+    // Method 2: Fetch with await to ensure the browser sends the request before proceeding
+    // We use 'no-cors' because Google Script redirects can cause CORS errors in browsers
     await fetch(finalUrl, {
       method: 'GET',
-      mode: 'no-cors', // Google Script වලට මේක ඕනේ
-      cache: 'no-cache'
+      mode: 'no-cors',
+      cache: 'no-cache',
+      keepalive: true // Keeps the request alive even if the page starts navigating
     });
 
-    // Verification එකට local storage එකේ තියාගන්නවා
-    OTP_STORE[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+    // Store the OTP locally for validation during the registration step
+    OTP_STORE[email] = { 
+      otp, 
+      expiresAt: Date.now() + 10 * 60 * 1000 // Valid for 10 minutes
+    };
     
-    console.log("OTP Sent Request Triggered");
+    console.log("OTP Sent Request successfully triggered for:", email);
     return { success: true, message: 'OTP sent successfully!' };
   } catch (error) {
-    console.error("OTP Error:", error);
-    return { success: false, message: 'Failed to send OTP.' };
+    console.error("OTP Service Error:", error);
+    return { success: false, message: 'Failed to send OTP. Please check your connection.' };
   }
 }
 
