@@ -35,18 +35,19 @@ export default function Register({ onNavigate }: RegisterProps) {
   }, [step, resendTimer]);
 
   const handleResend = async () => {
-    if (resendTimer > 0) return;
-    setIsLoading(true);
-    try {
-      const result = await sendOTP(formData.email);
-      if (result.success) {
-        toast({ title: 'OTP Resent', description: 'Please check your email.' });
-        setResendTimer(60); // Timer එක Reset කරනවා
-      }
-    } finally {
-      setIsLoading(false);
+  if (resendTimer > 0) return;
+  setIsLoading(true);
+  try {
+    // මෙතනත් email එක විතරක් යවන්න
+    const result = await sendOTP(formData.email);
+    if (result.success) {
+      toast({ title: 'OTP Resent', description: 'Please check your email.' });
+      setResendTimer(60); 
     }
-  };
+  } finally {
+    setIsLoading(false);
+  }
+};
   // ----------------------------
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,39 +69,32 @@ export default function Register({ onNavigate }: RegisterProps) {
 };
 
   const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Password match වෙනවද බලනවා
-    if (formData.password !== formData.confirmPassword) {
-      toast({ 
-        title: 'Error', 
-        description: 'Passwords do not match', 
-        variant: 'destructive' 
-      });
-      return;
-    }
+  e.preventDefault();
+  
+  if (formData.password !== formData.confirmPassword) {
+    toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
+    return;
+  }
 
-    setIsLoading(true);
-    try {
-      // 6-digit OTP එකක් generate කරනවා
-      const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // AuthContext එකේ තියෙන sendOTP function එක call කරනවා
-      const result = await sendOTP(formData.email, generatedOTP); 
-      
-      if (result.success) {
-        toast({ title: 'OTP Sent', description: 'Check your email for the code.' });
-        setResendTimer(60);
-        setStep('otp'); // OTP පියවරට මාරු වෙනවා
-      } else {
-        toast({ title: 'Error', description: result.message, variant: 'destructive' });
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to send OTP', variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  try {
+    // දැන් මෙතන OTP එක generate කරන්නේ නැහැ, කෙලින්ම email එක විතරක් යවනවා
+    // AuthContext එකේ තියෙන sendOTP function එක ඇතුළේ අලුත් එකක් හැදෙනවා
+    const result = await sendOTP(formData.email); 
+    
+    if (result.success) {
+      toast({ title: 'OTP Sent', description: 'Check your email for the code.' });
+      setResendTimer(60);
+      setStep('otp'); 
+    } else {
+      toast({ title: 'Error', description: result.message, variant: 'destructive' });
     }
-  };
+  } catch (error) {
+    toast({ title: 'Error', description: 'Failed to send OTP', variant: 'destructive' });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
