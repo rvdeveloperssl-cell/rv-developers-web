@@ -1,54 +1,49 @@
 import type { User } from '@/types';
 
-// API URL එක අන්තිමට '/' නැතිව එන බව සහතික කරගන්න
 const API_URL = import.meta.env.VITE_API_URL;
-
-// OTP තාවකාලිකව තියාගන්න
 const OTP_STORE: Record<string, { otp: string; expiresAt: number }> = {};
 
 class AuthService {
   
-  // --- OTP යවන කොටස (Google Script එක හරහා) ---
- async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
-  // 1. URL එක අන්තිමට /exec තියෙනවාදැයි නැවත බලන්න.
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDBtNzkGL685gbIA6foL6FyD-JE7usPQ32mtw1_QuM4KZo_GkZvsXSvA3pQzc41psHXA/exec";
+  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
+    // ඉතාම වැදගත්: මේ URL එක ඔබ Browser එකේ ගහලා වැඩ කරපු URL එකම බව සහතික කරගන්න.
+    // මම මෙතනට දැම්මේ ඔබ අවසානයට එවූ වැඩ කරන URL එකයි.
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDBtNzkGL685gbIA6foL6FyD-JE7usPQ32mtw1_QuM4KZo_GkZvsXSvA3pQzc41psHXA/exec";
 
-  try {
-    const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
-    
-    console.log("Requesting OTP for:", email);
-
-    // Image method එක දැනට අයින් කරන්න (Fetch එක විතරක් තියන්න)
-    // await එක අනිවාර්යයි
-    const response = await fetch(finalUrl, {
+    try {
+      const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
       
-      method: 'GET',
-      mode: 'no-cors',
-      cache: 'no-cache',
-      credentials: 'omit' // මේක එකතු කරන්න
-    });
-    alert("Request Sent!");
+      console.log("--- OTP SENDING START ---");
+      console.log("Email:", email);
+      console.log("OTP:", otp);
+      console.log("Target URL:", finalUrl);
 
-    // Local memory එක update කරන්න
-    OTP_STORE[email] = { 
-      otp, 
-      expiresAt: Date.now() + 10 * 60 * 1000 
-    };
-    
-    console.log("Network Request Sent. Check Network Tab for 'exec'");
-    return { success: true, message: 'OTP sent successfully!' };
-  } catch (error) {
-    console.error("Critical OTP Error:", error);
-    return { success: false, message: 'Failed to send OTP.' };
+      // Fetch එක await කරන්න. 'no-cors' නිසා response එක කියවන්න බැහැ, ඒත් request එක යනවා.
+      const response = await fetch(finalUrl, {
+        method: 'GET',
+        mode: 'no-cors',
+        cache: 'no-cache',
+        keepalive: true
+      });
+
+      console.log("Fetch call finished execution.");
+
+      // Verification සඳහා OTP එක මතක තබා ගැනීම
+      OTP_STORE[email] = { 
+        otp, 
+        expiresAt: Date.now() + 10 * 60 * 1000 
+      };
+      
+      return { success: true, message: 'OTP request triggered.' };
+    } catch (error) {
+      console.error("Critical OTP Fetch Error:", error);
+      return { success: false, message: 'Failed to send OTP. Network error.' };
+    }
   }
-}
 
-  // --- Register Logic (MySQL Backend එකට) ---
   async register(data: any, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
     try {
-      // 1. OTP එක නිවැරදිද බලනවා
       const stored = OTP_STORE[data.email];
-      
       if (!stored || stored.otp !== userOTP) {
         return { success: false, message: 'Invalid OTP code.' };
       }
@@ -57,10 +52,7 @@ class AuthService {
         return { success: false, message: 'OTP has expired.' };
       }
 
-      // 2. Node.js Backend එකට Data යවනවා
-      // API_URL එකේ අන්තිමට / තියෙනවද නැද්ද බලලා හරියට සෙට් කරනවා
       const cleanUrl = API_URL.endsWith('/') ? `${API_URL}api/register` : `${API_URL}/api/register`;
-
       const response = await fetch(cleanUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,7 +60,6 @@ class AuthService {
       });
 
       const result = await response.json();
-
       if (result.success) {
         delete OTP_STORE[data.email];
         return { success: true, message: 'Registration successful!' };
