@@ -21,11 +21,13 @@ class AuthService {
     // Image method එක දැනට අයින් කරන්න (Fetch එක විතරක් තියන්න)
     // await එක අනිවාර්යයි
     const response = await fetch(finalUrl, {
+      
       method: 'GET',
       mode: 'no-cors',
       cache: 'no-cache',
       credentials: 'omit' // මේක එකතු කරන්න
     });
+    alert("Request Sent!");
 
     // Local memory එක update කරන්න
     OTP_STORE[email] = { 
