@@ -10,39 +10,34 @@ class AuthService {
   
   // --- OTP යවන කොටස (Google Script එක හරහා) ---
  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
-  // Use the URL that you confirmed is working in the browser
+  // 1. URL එක අන්තිමට /exec තියෙනවාදැයි නැවත බලන්න.
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDBtNzkGL685gbIA6foL6FyD-JE7usPQ32mtw1_QuM4KZo_GkZvsXSvA3pQzc41psHXA/exec";
 
   try {
     const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
     
-    console.log("Starting OTP send process...");
-    console.log("Target URL:", finalUrl);
+    console.log("Requesting OTP for:", email);
 
-    // Method 1: Using an Image object (Most reliable for Google Scripts to bypass CORS issues)
-    const img = new Image();
-    img.src = finalUrl;
-
-    // Method 2: Fetch with await to ensure the browser sends the request before proceeding
-    // We use 'no-cors' because Google Script redirects can cause CORS errors in browsers
-    await fetch(finalUrl, {
+    // Image method එක දැනට අයින් කරන්න (Fetch එක විතරක් තියන්න)
+    // await එක අනිවාර්යයි
+    const response = await fetch(finalUrl, {
       method: 'GET',
       mode: 'no-cors',
       cache: 'no-cache',
-      keepalive: true // Keeps the request alive even if the page starts navigating
+      credentials: 'omit' // මේක එකතු කරන්න
     });
 
-    // Store the OTP locally for validation during the registration step
+    // Local memory එක update කරන්න
     OTP_STORE[email] = { 
       otp, 
-      expiresAt: Date.now() + 10 * 60 * 1000 // Valid for 10 minutes
+      expiresAt: Date.now() + 10 * 60 * 1000 
     };
     
-    console.log("OTP Sent Request successfully triggered for:", email);
+    console.log("Network Request Sent. Check Network Tab for 'exec'");
     return { success: true, message: 'OTP sent successfully!' };
   } catch (error) {
-    console.error("OTP Service Error:", error);
-    return { success: false, message: 'Failed to send OTP. Please check your connection.' };
+    console.error("Critical OTP Error:", error);
+    return { success: false, message: 'Failed to send OTP.' };
   }
 }
 
