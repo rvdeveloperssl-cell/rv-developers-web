@@ -97,18 +97,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sendOTP = async (email: string) => {
   try {
-    // 1. එකම අංකය මෙතනදී හදනවා
+    // 1. අලුත් OTP එකක් හදනවා
     const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log("Debug: Generated OTP is:", generatedOTP);
     
-    // 2. Browser එකේ සේව් කරනවා
+    // 2. Verification සඳහා sessionStorage එකේ තබා ගන්නවා
     sessionStorage.setItem('rv_temp_otp', generatedOTP);
 
-    // 3. දැන් Service එකට ඒ OTP එකම යවනවා (දැන් Service එක ඇතුළේ අලුතින් හදන්නේ නැහැ)
+    // 3. Service එක හරහා Google Script එකට යවනවා
     const result = await authService.sendOTP(email, generatedOTP);
-
     return result;
   } catch (error) {
-    return { success: false, message: 'Network error occurred.' };
+    console.error("AuthContext SendOTP Error:", error);
+    return { success: false, message: 'Internal error occurred.' };
   }
 };
 
