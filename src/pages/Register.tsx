@@ -77,24 +77,31 @@ export default function Register({ onNavigate }: RegisterProps) {
   }
 
   setIsLoading(true);
-  console.log("Starting OTP process for:", formData.email); // Debug log
 
   try {
-    // AuthContext එකේ තියෙන sendOTP එක තමයි මෙතන වැඩ කරන්නේ
+    // AuthContext එකෙන් එන sendOTP එක call කරනවා
     const result = await sendOTP(formData.email); 
     
-    console.log("AuthContext result:", result); // මේක බලන්න Success ද කියලා
-
     if (result.success) {
-      toast({ title: 'OTP Sent', description: 'Check your email for the code.' });
+      toast({ 
+        title: 'OTP Sent!', 
+        description: `We've sent a 6-digit code to ${formData.email}`,
+      });
       setResendTimer(60);
-      setStep('otp'); 
+      setStep('otp'); // OTP ඇතුළත් කරන පියවරට යනවා
     } else {
-      toast({ title: 'Error', description: result.message, variant: 'destructive' });
+      toast({ 
+        title: 'Failed', 
+        description: result.message, 
+        variant: 'destructive' 
+      });
     }
   } catch (error) {
-    console.error("HandleSendOTP Error:", error);
-    toast({ title: 'Error', description: 'Failed to send OTP', variant: 'destructive' });
+    toast({ 
+      title: 'Connection Error', 
+      description: 'Could not connect to the server.', 
+      variant: 'destructive' 
+    });
   } finally {
     setIsLoading(false);
   }
