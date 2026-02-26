@@ -97,19 +97,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sendOTP = async (email: string) => {
   try {
+    setIsLoading(true);
+    
     // 1. අලුත් OTP එකක් හදනවා
     const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log("Debug: Generated OTP is:", generatedOTP);
+    console.log("Debug: Generated OTP for VPS:", generatedOTP);
     
     // 2. Verification සඳහා sessionStorage එකේ තබා ගන්නවා
     sessionStorage.setItem('rv_temp_otp', generatedOTP);
 
-    // 3. Service එක හරහා Google Script එකට යවනවා
+    // 3. දැන් අපේ VPS Backend එකට යවනවා (authService හරහා)
     const result = await authService.sendOTP(email, generatedOTP);
+    
     return result;
   } catch (error) {
     console.error("AuthContext SendOTP Error:", error);
-    return { success: false, message: 'Internal error occurred.' };
+    return { success: false, message: 'An unexpected error occurred.' };
+  } finally {
+    setIsLoading(false);
   }
 };
 
