@@ -1,6 +1,6 @@
 import type { User } from '@/types';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "http://pscgk48cgko8ok4kskswcog8.65.108.212.204.sslip.io";
 // OTP එක තාවකාලිකව තියාගන්න (Frontend verification සඳහා අවශ්‍ය නම් පමණක්)
 const OTP_STORE: Record<string, { otp: string; expiresAt: number }> = {};
 
