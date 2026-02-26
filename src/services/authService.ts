@@ -30,7 +30,7 @@ class AuthService {
       return { success: false, message: 'Server connection error. Please try again.' };
     }
   }
-};
+
 
   async register(data: any, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
     try {
