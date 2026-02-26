@@ -4,7 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 const OTP_STORE: Record<string, { otp: string; expiresAt: number }> = {};
 export const authService = {
 
-class AuthService {
+
   
   async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
     try {
@@ -30,6 +30,7 @@ class AuthService {
       return { success: false, message: 'Server connection error. Please try again.' };
     }
   }
+};
 
 
   async register(data: any, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
