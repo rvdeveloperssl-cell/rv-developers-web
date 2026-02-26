@@ -1,21 +1,19 @@
 import type { User } from '@/types';
 
-const API_URL = "http://pscgk48cgko8ok4kskswcog8.65.108.212.204.sslip.io";
-// OTP එක තාවකාලිකව තියාගන්න (Frontend verification සඳහා අවශ්‍ය නම් පමණක්)
-const OTP_STORE: Record<string, { otp: string; expiresAt: number }> = {};
+const API_URL = import.meta.env.VITE_API_URL || "http://pscgk48cgko8ok4kskswcog8.65.108.212.204.sslip.io";
 
 class AuthService {
-  // 1. OTP යවන කොටස (VPS Backend එකට)
-  async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
+  async sendOTP(email: string, otp: string) {
     try {
-      console.log("--- Sending OTP via VPS Backend ---");
-      const cleanUrl = API_URL.endsWith('/') ? `${API_URL}api/send-otp` : `${API_URL}/api/send-otp`;
+      // 2. URL එක හදන කොට වඩාත් ආරක්ෂිතව මෙහෙම ලියන්න
+      const baseUrl = API_URL.replace(/\/$/, ""); // අන්තිමට තියෙන / එක අයින් කරනවා
+      const cleanUrl = `${baseUrl}/api/send-otp`;
       
+      console.log("Calling Backend URL:", cleanUrl); // මේක දාලා බලන්න දැන් මොකක්ද පෙන්වන්නේ කියලා
+
       const response = await fetch(cleanUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        method: 'POST', // අනිවාර්යයෙන් POST විය යුතුයි
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp }),
       });
 
