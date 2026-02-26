@@ -2,44 +2,35 @@ import type { User } from '@/types';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const OTP_STORE: Record<string, { otp: string; expiresAt: number }> = {};
+export const authService = {
 
 class AuthService {
   
   async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
-    // ඉතාම වැදගත්: මේ URL එක ඔබ Browser එකේ ගහලා වැඩ කරපු URL එකම බව සහතික කරගන්න.
-    // මම මෙතනට දැම්මේ ඔබ අවසානයට එවූ වැඩ කරන URL එකයි.
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDBtNzkGL685gbIA6foL6FyD-JE7usPQ32mtw1_QuM4KZo_GkZvsXSvA3pQzc41psHXA/exec";
-
     try {
-      const finalUrl = `${SCRIPT_URL}?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
+      console.log("--- Sending OTP via VPS Backend ---");
       
-      console.log("--- OTP SENDING START ---");
-      console.log("Email:", email);
-      console.log("OTP:", otp);
-      console.log("Target URL:", finalUrl);
-
-      // Fetch එක await කරන්න. 'no-cors' නිසා response එක කියවන්න බැහැ, ඒත් request එක යනවා.
-      const response = await fetch(finalUrl, {
-        method: 'GET',
-        mode: 'no-cors',
-        cache: 'no-cache',
-        keepalive: true
+      const response = await fetch(`${API_URL}/api/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp }),
       });
 
-      console.log("Fetch call finished execution.");
-
-      // Verification සඳහා OTP එක මතක තබා ගැනීම
-      OTP_STORE[email] = { 
-        otp, 
-        expiresAt: Date.now() + 10 * 60 * 1000 
-      };
+      const data = await response.json();
       
-      return { success: true, message: 'OTP request triggered.' };
+      if (response.ok && data.success) {
+        return { success: true, message: 'OTP sent to your email.' };
+      } else {
+        return { success: false, message: data.message || 'Failed to send OTP.' };
+      }
     } catch (error) {
-      console.error("Critical OTP Fetch Error:", error);
-      return { success: false, message: 'Failed to send OTP. Network error.' };
+      console.error("VPS Auth Error:", error);
+      return { success: false, message: 'Server connection error. Please try again.' };
     }
   }
+};
 
   async register(data: any, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
     try {
