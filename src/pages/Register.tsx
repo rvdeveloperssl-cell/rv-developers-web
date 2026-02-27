@@ -107,42 +107,40 @@ export default function Register({ onNavigate }: RegisterProps) {
   }
 };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const handleContinue = async (e: React.FormEvent) => {
+  e.preventDefault();
+  console.log("--- STEP 1: Continue Button Clicked ---");
+  console.log("Email to send OTP:", formData.email);
 
-    try {
-      // AuthContext එකට formData එකයි, user ඇතුළත් කරපු otp එකයි යවනවා
-      // සටහන: register function එක AuthContext එකේ හරියට define කරලා තිබිය යුතුයි
-      const result = await register({
-        ...formData,
-        otp: otp
-      });
+  setIsLoading(true);
+  try {
+    // AuthContext එකේ තියෙන sendOTP function එකට කතා කරනවා
+    console.log("Calling AuthContext.sendOTP...");
+    const result = await sendOTP(formData.email); 
+    
+    console.log("AuthContext Result:", result);
 
-      if (result.success) {
-        toast({
-          title: 'Account Created!',
-          description: 'Your account has been successfully created.',
-        });
-        // සාර්ථක නම් Login පේජ් එකට යවනවා
-        onNavigate('login'); 
-      } else {
-        toast({
-          title: 'Registration Failed',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+    if (result.success) {
+      console.log("OTP Sent Successfully! Moving to OTP step.");
+      setStep('otp');
       toast({
-        title: 'Error',
-        description: 'An unexpected error occurred.',
-        variant: 'destructive',
+        title: "OTP Sent",
+        description: "Please check your email for the verification code.",
       });
-    } finally {
-      setIsLoading(false);
+    } else {
+      console.error("Failed to send OTP:", result.message);
+      toast({
+        title: "Error",
+        description: result.message,
+        variant: "destructive",
+      });
     }
-  };
+  } catch (error) {
+    console.error("CRITICAL ERROR in handleContinue:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const renderDetailsForm = () => (
     <form onSubmit={handleSendOTP} className="space-y-4">
