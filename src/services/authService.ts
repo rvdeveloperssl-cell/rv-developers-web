@@ -1,6 +1,6 @@
 import type { User } from '@/types';
 
-const API_URL = import.meta.env.VITE_API_URL || "http://pscgk48cgko8ok4kskswcog8.65.108.212.204.sslip.io";
+const API_URL = import.meta.env.VITE_API_URL || "http://c4ckkocookws8kg4wc8ckow8.65.108.212.204.sslip.io";
 
 class AuthService {
   async sendOTP(email: string, otp: string): Promise<{ success: boolean; message: string }> {
@@ -8,7 +8,7 @@ class AuthService {
     console.log("--- [STEP 4] authService: Starting Fetch ---");
     
     // 1. අපි කෙලින්ම VPS Backend URL එක මෙතනට දාමු (Variables වල ලෙඩ මගහරින්න)
-    const backendUrl = "http://pscgk48cgko8ok4kskswcog8.65.108.212.204.sslip.io/api/send-otp";
+    const backendUrl = "http://c4ckkocookws8kg4wc8ckow8.65.108.212.204.sslip.io/api/send-otp";
     
     console.log("Request URL:", backendUrl);
     console.log("Payload:", { email, otp });
