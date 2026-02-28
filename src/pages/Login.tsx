@@ -21,7 +21,7 @@ export default function Login({ onNavigate }: LoginProps) {
   setIsLoading(true);
 
   try {
-    // 1. Email සහ Password පරීක්ෂා කිරීම (Trim කරලා ගන්න එක හොඳයි)
+    // 1. Email සහ Password පරීක්ෂා කිරීම
     const loginData = {
       email: email.trim(),
       password: password
@@ -29,23 +29,26 @@ export default function Login({ onNavigate }: LoginProps) {
 
     console.log("Attempting login for:", loginData.email);
 
-    // 2. AuthService එක හරහා login වීම (result එක මෙතන විතරක් Declare කරන්න)
+    // 2. AuthService එක හරහා login වීම
     const result = await authService.login(loginData);
 
     if (result.success) {
       toast({ 
-        title: 'Welcome back!',
-        
-        description: 'Successful login.'
-        window.location.href = '/';
+        title: 'Welcome back!', 
+        description: 'Successful login.' 
       });
-      
-      // Role එක අනුව navigate කිරීම
+
+      // 3. මුලින්ම Local Storage එකට user දත්ත දාන්න (authService එකේ මේක වෙනවා ඇති, ඒත් සහතික කරගන්න)
+      localStorage.setItem('rv_user', JSON.stringify(result.user));
+
+      // 4. Role එක අනුව පේජ් එක Refresh කරලා යවන්න
+      // මෙතනින් window එකම අලුත් වෙන නිසා Navbar එකට අලුත් දත්ත ටික ඉබේම ලැබෙනවා
       if (result.user && result.user.role === 'admin') {
-        onNavigate('admin-dashboard');
+        window.location.href = '/admin-dashboard'; 
       } else {
-        onNavigate('dashboard');
+        window.location.href = '/dashboard'; 
       }
+      
     } else {
       toast({
         title: 'Login Failed',
@@ -64,7 +67,6 @@ export default function Login({ onNavigate }: LoginProps) {
     setIsLoading(false);
   }
 };
-
   return (
     <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
       <div className="rv-container">
