@@ -98,34 +98,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendOTP = async (email: string) => {
   try {
     setIsLoading(true);
-    // 1. Log එකක් දාමු වැඩේ පටන් ගත්තා කියලා
     console.log("--- [STEP 3] AuthContext: Starting sendOTP process ---");
-    console.log("Target Email:", email);
     
-    // 2. අලුත් OTP එකක් හදනවා
+    // 1. අලුත් OTP එකක් මෙතනම හදනවා (Register.tsx එකේ හදන්න එපා)
     const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log("Generated OTP:", generatedOTP);
     
-    // 3. Verification සඳහා sessionStorage එකේ තබා ගන්නවා
+    // 2. මේ අලුත් OTP එක sessionStorage එකට දානවා
     sessionStorage.setItem('rv_temp_otp', generatedOTP);
-    console.log("OTP saved to sessionStorage");
+    console.log("OTP saved to sessionStorage:", generatedOTP);
 
-    // 4. AuthService එකට කතා කරන එක (මෙතනයි ගොඩක් වෙලාවට හිරවෙන්නේ)
-    console.log("Calling authService.sendOTP now...");
-    
-    // authService එකේ ලෙඩක් තිබුණොත් මේ පේළියෙන් පස්සේ මුකුත් පේන්නේ නැහැ
+    // 3. authService එකට කියනවා මේ හදපු OTP එක email කරන්න කියලා
     const result = await authService.sendOTP(email, generatedOTP);
     
-    console.log("AuthService Response:", result);
     return result;
-
   } catch (error) {
-    // මොකක් හරි ලොකු අවුලක් වුණොත් මෙතනින් පේනවා
     console.error("!!! AuthContext CRITICAL ERROR !!!", error);
     return { success: false, message: 'An unexpected error occurred.' };
   } finally {
     setIsLoading(false);
-    console.log("--- AuthContext Process Finished ---");
   }
 };
 
