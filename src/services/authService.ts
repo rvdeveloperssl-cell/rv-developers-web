@@ -74,26 +74,24 @@ class AuthService {
   try {
     const cleanUrl = API_URL.endsWith('/') ? `${API_URL}api/login` : `${API_URL}/api/login`;
 
-    // 1. මෙතනින් අපිට බලාගන්න පුළුවන් යන්නේ මොනවද කියලා
-    console.log("--- Frontend Debug: Sending to Backend ---");
-    console.log("Data type:", typeof credentials);
-    console.log("Content:", credentials);
+    // 1. මේ ලොග් එක Browser console එකේ පේනවා නේද බලන්න
+    console.log("LOGGING DATA:", credentials.email, credentials.password);
 
     const response = await fetch(cleanUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials), // කෙලින්ම credentials object එක යවනවා
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password
+      }),
     });
 
     const result = await response.json();
-    
     if (result.success) {
       localStorage.setItem('rv_user', JSON.stringify(result.user));
     }
-    
     return result;
   } catch (error) {
-    console.error("Login Error:", error);
     return { success: false, message: 'Server connection failed.' };
   }
 }
