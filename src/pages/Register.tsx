@@ -34,22 +34,32 @@ export default function Register({ onNavigate }: RegisterProps) {
     return () => clearInterval(interval);
   }, [step, resendTimer]);
 
-  const handleResend = async () => {
-    if (resendTimer > 0) return;
-    setIsLoading(true);
-    try {
-      // අලුත් 6-digit OTP එකක් හදනවා
-      const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      const result = await sendOTP(formData.email, newOtp); // email එකයි otp එකයි දෙකම යවන්න
-      if (result.success) {
-        toast({ title: 'OTP Resent', description: 'Please check your email.' });
-        setResendTimer(60); 
-      }
-    } finally {
-      setIsLoading(false);
+  const handleSendOTP = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (formData.password !== formData.confirmPassword) {
+    toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    // දැන් මෙතන OTP හදන්න එපා. 
+    // AuthContext එකේ sendOTP එකට email එක විතරක් යවන්න.
+    const result = await sendOTP(formData.email); 
+    
+    if (result.success) {
+      toast({ title: 'OTP Sent!', description: `Check your email ${formData.email}` });
+      setResendTimer(60);
+      setStep('otp');
+    } else {
+      toast({ title: 'Failed', description: result.message, variant: 'destructive' });
     }
-  };
+  } catch (error) {
+    toast({ title: 'Error', description: 'Could not connect.', variant: 'destructive' });
+  } finally {
+    setIsLoading(false);
+  }
+};
   // ----------------------------
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
