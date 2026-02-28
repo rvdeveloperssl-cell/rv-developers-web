@@ -1,35 +1,60 @@
-import { rtdb } from '@/lib/firebase';
-import { ref, set, push } from "firebase/database";
+// src/services/licenseService.ts
+
+// ඔයාගේ Backend එකේ URL එක
+const API_URL = "http://c4ckkocookws8kg4wc8ckow8.65.108.212.204.sslip.io";
+
+/**
+ * අද දින සිට වසරක් ඉදිරියට expiry date එක ගණනය කරන function එක
+ */
+const calculateExpiryDate = () => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 1); // වසර 1ක් එකතු කරයි
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD format එකට ලබා දෙයි
+};
 
 export const generateAndSaveLicense = async (userId: string, fullName: string) => {
-  // 1. අකුරු සහ ඉලක්කම් කලවම් කරලා Key එකක් හදනවා
+  // 1. අහඹු අකුරු සහ ඉලක්කම් භාවිතයෙන් License Key එකක් සාදා ගැනීම
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const part1 = Array(5).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
   const part2 = Array(5).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
   const finalKey = `RVQ-${part1}-${part2}`;
 
+  // 2. අද සිට වසරක් ඉදිරියට දින වකවානුව ලබා ගැනීම
+  const expiryDate = calculateExpiryDate();
+
   try {
-    // 2. Database එකේ 'licenses' යටතේ Save කරනවා
-    // මෙතන userId එක key එක විදිහට පාවිච්චි කරන එක ලේසියි
-    await set(ref(rtdb, 'licenses/' + userId), {
-      ownerName: fullName,
-      licenseKey: finalKey,
-      status: 'active',
-      management: 'enabled', // ඔයාගේ Control Panel එකේ වැඩ කරන්න මේක ඕනේ
-      activatedDate: new Date().toISOString(),
-      expiryDate: '2026-12-31',
-      systemAccess: 'enabled'
+    // 3. MySQL Backend (API) එකට දත්ත යැවීම
+    const response = await fetch(`${API_URL}/api/licenses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: userId,
+        ownerName: fullName,
+        licenseKey: finalKey,
+        status: 'active',
+        expiryDate: expiryDate,
+        activatedDate: new Date().toISOString()
+      }),
     });
 
-    return finalKey;
+    const result = await response.json();
+
+    if (result.success) {
+      console.log("License saved successfully to MySQL!");
+      return finalKey;
+    } else {
+      console.error("Failed to save license:", result.message);
+      return null;
+    }
   } catch (error) {
-    console.error("License saving error:", error);
+    console.error("MySQL License saving error:", error);
     return null;
   }
-
 };
 
-// අන්න අර කලින් ආපු Error එක නිවෙන්න මෙන්න මේ පේළි ටික අන්තිමටම පේස්ට් කරන්න
+// අනිත් ෆයිල් වල පාවිච්චි කරන්න ලේසි වෙන්න මෙහෙම Export කරනවා
 export const licenseService = {
-  generateAndSaveLicense: generateAndSaveLicense
+  generateAndSaveLicense
 };
