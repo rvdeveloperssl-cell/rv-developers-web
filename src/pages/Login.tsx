@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { authService } from '../services/authService';
 
 interface LoginProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
