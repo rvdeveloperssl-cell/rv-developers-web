@@ -18,20 +18,26 @@ export default function Login({ onNavigate }: LoginProps) {
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setIsLoading(true);
-  
-  // මෙන්න මෙහෙමයි call කරන්න ඕනේ
-  const result = await authService.login({ email, password });
 
-    // කෙලින්ම අගයන් දෙක object එකක් විදිහට යවමු
+  try {
+    // 1. Email සහ Password පරීක්ෂා කිරීම (Trim කරලා ගන්න එක හොඳයි)
     const loginData = {
-      email: email,
+      email: email.trim(),
       password: password
     };
 
-    const result = await login(loginData);
+    console.log("Attempting login for:", loginData.email);
+
+    // 2. AuthService එක හරහා login වීම (result එක මෙතන විතරක් Declare කරන්න)
+    const result = await authService.login(loginData);
 
     if (result.success) {
-      toast({ title: 'Welcome back!', description: 'Successful login.' });
+      toast({ 
+        title: 'Welcome back!', 
+        description: 'Successful login.' 
+      });
+      
+      // Role එක අනුව navigate කිරීම
       if (result.user && result.user.role === 'admin') {
         onNavigate('admin-dashboard');
       } else {
@@ -40,14 +46,15 @@ export default function Login({ onNavigate }: LoginProps) {
     } else {
       toast({
         title: 'Login Failed',
-        description: result.message,
+        description: result.message || 'Invalid email or password.',
         variant: 'destructive',
       });
     }
   } catch (error) {
+    console.error("Login component error:", error);
     toast({
       title: 'Error',
-      description: 'Server connection failed.',
+      description: 'An unexpected error occurred. Please try again.',
       variant: 'destructive',
     });
   } finally {
