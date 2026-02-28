@@ -38,33 +38,34 @@ class AuthService {
   // 2. Register වන කොටස
   async register(data: any, userOTP: string): Promise<{ success: boolean; user?: any; message: string }> {
     try {
-      // Frontend එකේදී OTP එක නිවැරදිදැයි බලනවා
-      const stored = OTP_STORE[data.email];
-      if (!stored || stored.otp !== userOTP) {
-        return { success: false, message: 'Invalid OTP code.' };
-      }
-      
-      if (Date.now() > stored.expiresAt) {
-        return { success: false, message: 'OTP has expired.' };
-      }
+      // 1. OTP_STORE එක වෙනුවට අපි කලින් කරපු විදිහටම API එකට කෙලින්ම දත්ත යවමු.
+      // මොකද අපි දැනටමත් AuthContext එකේදී OTP එක හරිද කියලා sessionStorage එකෙන් බලනවා.
 
       const cleanUrl = API_URL.endsWith('/') ? `${API_URL}api/register` : `${API_URL}/api/register`;
+      
+      console.log("Connecting to Backend for Registration:", cleanUrl);
+
       const response = await fetch(cleanUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(data), // මෙතන data එකේ දැන් otp එකත් තියෙනවා (අපි කලින් Register.tsx එකේ හැදුවා වගේ)
       });
 
       const result = await response.json();
+
       if (result.success) {
-        delete OTP_STORE[data.email]; // වැඩේ ඉවර නිසා OTP එක අයින් කරනවා
-        return { success: true, message: 'Registration successful!' };
+        // වැඩේ සාර්ථක නම් user දත්ත local storage එකේ දාගන්නවා (Login වෙලා ඉන්න විදිහට පේන්න)
+        if (result.user) {
+          localStorage.setItem('rv_user', JSON.stringify(result.user));
+        }
+        return { success: true, message: 'Registration successful!', user: result.user };
       } else {
         return { success: false, message: result.message || 'Registration failed.' };
       }
     } catch (error: any) {
       console.error("Register Error:", error);
-      return { success: false, message: 'Could not connect to server.' };
+      // 'Could not connect to server' කියලා වැටෙන්නේ catch එකට ආවමයි
+      return { success: false, message: 'Server error: ' + error.message };
     }
   }
 
