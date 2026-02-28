@@ -279,7 +279,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {licenses.length === 0 ? (
         <div className="text-center py-12">
           <Key className="w-16 h-16 text-[#A7ACB8] mx-auto mb-4" />
-          <p className="text-[#A7ACB8]">No licenses found</p>
+          <p className="text-[#A7ACB8]">No Licenses Found</p>
         </div>
       ) : (
         <div className="space-y-4">
