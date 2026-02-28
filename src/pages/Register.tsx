@@ -133,58 +133,52 @@ export default function Register({ onNavigate }: RegisterProps) {
 };
 
  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      // 1. Session Storage එකේ අපි කලින් සේව් කරපු OTP එක ගන්නවා
-      const savedOtp = sessionStorage.getItem('rv_temp_otp');
+  try {
+    // 1. Session Storage එකේ තියෙන OTP එක මෙතන චෙක් කරන්න ඕනේ නැහැ 
+    // මොකද අපි ඒක AuthContext එක ඇතුළේ කරනවා.
 
-      // 2. යූසර් ගහපු OTP එකයි, සේව් වෙලා තියෙන එකයි සසඳනවා
-      if (otp !== savedOtp) {
-        toast({
-          title: 'Verification Failed',
-          description: 'The OTP you entered is incorrect.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
+    // 2. වැදගත්ම දේ: formData එකට otp එක එකතු කරලා යවන්න
+    // 'otp' කියන්නේ ඔයාගේ Input field එකේ state එක.
+    const finalData = {
+      ...formData,
+      otp: otp // යූසර් screen එකේ ටයිප් කරපු 6-digit code එක
+    };
 
-      // 3. OTP එක හරි නම්, දැන් දත්ත ටික MySQL Backend එකට යවනවා
-      console.log("OTP Verified! Registering user...");
-      const result = await register(formData);
+    console.log("Registering user with OTP...");
+    const result = await register(finalData); // දැන් data.otp විදිහට අගය AuthContext එකට යනවා
 
-      if (result.success) {
-        toast({
-          title: 'Registration Successful!',
-          description: 'Your account has been created. Redirecting to login...',
-        });
-        
-        // වැඩේ ඉවර නිසා තාවකාලික දත්ත අයින් කරනවා
-        sessionStorage.removeItem('rv_temp_otp');
-
-        setTimeout(() => {
-          onNavigate('login');
-        }, 2000);
-      } else {
-        toast({
-          title: 'Registration Failed',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error("Registration Process Error:", error);
+    if (result.success) {
       toast({
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
+        title: 'Registration Successful!',
+        description: 'Your account has been created. Redirecting to login...',
+      });
+      
+      sessionStorage.removeItem('rv_temp_otp');
+
+      setTimeout(() => {
+        onNavigate('login');
+      }, 2000);
+    } else {
+      toast({
+        title: 'Registration Failed',
+        description: result.message,
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Registration Process Error:", error);
+    toast({
+      title: 'Error',
+      description: 'Something went wrong. Please try again.',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   
 
