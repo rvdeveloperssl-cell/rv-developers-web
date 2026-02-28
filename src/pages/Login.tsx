@@ -16,42 +16,46 @@ export default function Login({ onNavigate }: LoginProps) {
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      // අපි හදාගත්ත අලුත් authService එකට Object එකක් විදියට දත්ත යවනවා
-      const result = await login({ email, password });
+  try {
+    // මෙන්න මෙතන තමයි වැරැද්ද තිබුණේ. 
+    // අපි පරීක්ෂා කරමු email සහ password කියන state දෙකේ අගයන් තියෙනවද කියලා.
+    console.log("Form States - Email:", email, "Password:", password);
 
-      if (result.success) {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully logged in.',
-        });
+    // කෙලින්ම අගයන් දෙක object එකක් විදිහට යවමු
+    const loginData = {
+      email: email,
+      password: password
+    };
 
-        // Backend එකෙන් එන User Role එක අනුව යවන Dashboard එක තීරණය කරනවා
-        if (result.user && result.user.role === 'admin') {
-          onNavigate('admin-dashboard');
-        } else {
-          onNavigate('dashboard');
-        }
+    const result = await login(loginData);
+
+    if (result.success) {
+      toast({ title: 'Welcome back!', description: 'Successful login.' });
+      if (result.user && result.user.role === 'admin') {
+        onNavigate('admin-dashboard');
       } else {
-        toast({
-          title: 'Login Failed',
-          description: result.message,
-          variant: 'destructive',
-        });
+        onNavigate('dashboard');
       }
-    } catch (error) {
+    } else {
       toast({
-        title: 'Error',
-        description: 'Server connection failed. Please try again later.',
+        title: 'Login Failed',
+        description: result.message,
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  } catch (error) {
+    toast({
+      title: 'Error',
+      description: 'Server connection failed.',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
