@@ -70,29 +70,33 @@ class AuthService {
   }
 
   // 3. Login වන කොටස
-  async login(credentials: any): Promise<{ success: boolean; user?: any; message: string }> {
-    try {
-      const cleanUrl = API_URL.endsWith('/') ? `${API_URL}api/login` : `${API_URL}/api/login`;
+  async login(credentials: { email: string; password: string }): Promise<{ success: boolean; user?: any; message: string }> {
+  try {
+    const cleanUrl = API_URL.endsWith('/') ? `${API_URL}api/login` : `${API_URL}/api/login`;
 
-      const response = await fetch(cleanUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-      });
+    // 1. මෙතනින් අපිට බලාගන්න පුළුවන් යන්නේ මොනවද කියලා
+    console.log("--- Frontend Debug: Sending to Backend ---");
+    console.log("Data type:", typeof credentials);
+    console.log("Content:", credentials);
 
-      const result = await response.json();
+    const response = await fetch(cleanUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials), // කෙලින්ම credentials object එක යවනවා
+    });
 
-      if (result.success) {
-        localStorage.setItem('rv_user', JSON.stringify(result.user));
-        return { success: true, user: result.user, message: 'Login successful!' };
-      } else {
-        return { success: false, message: result.message || 'Invalid email or password.' };
-      }
-    } catch (error) {
-      console.error("Login Error:", error);
-      return { success: false, message: 'Server connection failed.' };
+    const result = await response.json();
+    
+    if (result.success) {
+      localStorage.setItem('rv_user', JSON.stringify(result.user));
     }
+    
+    return result;
+  } catch (error) {
+    console.error("Login Error:", error);
+    return { success: false, message: 'Server connection failed.' };
   }
+}
 
   // 4. දැනට ඉන්න User ව ලබාගැනීම
   getCurrentUser(): User | null {
