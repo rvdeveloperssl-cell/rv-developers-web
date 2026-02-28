@@ -34,8 +34,10 @@ export default function Login({ onNavigate }: LoginProps) {
 
     if (result.success) {
       toast({ 
-        title: 'Welcome back!', 
-        description: 'Successful login.' 
+        title: 'Welcome back!',
+        
+        description: 'Successful login.'
+        window.location.href = '/';
       });
       
       // Role එක අනුව navigate කිරීම
