@@ -42,35 +42,44 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     }
     
     setIsLoading(true);
+    // ඔයාගේ Backend URL එක
+    const API_URL = "http://c4ckkocookws8kg4wc8ckow8.65.108.212.204.sslip.io";
+
     try {
-      // Promise.allSettled පාවිච්චි කිරීමෙන් එක සර්විස් එකක් ෆේල් වුණත් ඉතිරි ඒවා වැඩ කරයි
+      // MySQL Backend එකෙන් එකවර දත්ත වර්ග කිහිපයක් ලබා ගැනීම
+      // සටහන: ඔයාගේ Backend එකේ මේ Endpoints (API Paths) ටික තියෙන්න ඕනේ.
       const results = await Promise.allSettled([
-        licenseService.getUserLicenses(user.id),
-        paymentService.getUserPurchases(user.id),
-        paymentService.getUserInvoices(user.id),
-        softwareService.getAllSoftware(),
+        fetch(`${API_URL}/api/licenses/user/${user.id}`).then(res => res.json()),
+        fetch(`${API_URL}/api/purchases/user/${user.id}`).then(res => res.json()),
+        fetch(`${API_URL}/api/invoices/user/${user.id}`).then(res => res.json()),
+        fetch(`${API_URL}/api/software/all`).then(res => res.json()),
       ]);
 
-      const licensesData = results[0].status === 'fulfilled' ? results[0].value : [];
-      const purchasesData = results[1].status === 'fulfilled' ? results[1].value : [];
-      const invoicesData = results[2].status === 'fulfilled' ? results[2].value : [];
-      const allSoftware = results[3].status === 'fulfilled' ? results[3].value : [];
+      // 1. Licenses ලබා ගැනීම
+      const licensesRes = results[0].status === 'fulfilled' ? results[0].value : { success: false, data: [] };
+      setLicenses(Array.isArray(licensesRes.data) ? licensesRes.data : []);
 
-      setLicenses(Array.isArray(licensesData) ? licensesData : []);
-      setPurchases(Array.isArray(purchasesData) ? purchasesData : []);
-      setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
+      // 2. Purchases ලබා ගැනීම
+      const purchasesRes = results[1].status === 'fulfilled' ? results[1].value : { success: false, data: [] };
+      setPurchases(Array.isArray(purchasesRes.data) ? purchasesRes.data : []);
 
+      // 3. Invoices ලබා ගැනීම
+      const invoicesRes = results[2].status === 'fulfilled' ? results[2].value : { success: false, data: [] };
+      setInvoices(Array.isArray(invoicesRes.data) ? invoicesRes.data : []);
+
+      // 4. Software Map එක සකස් කිරීම (Software ID එකෙන් නම බලාගන්න මේක ඕනේ)
+      const softwareRes = results[3].status === 'fulfilled' ? results[3].value : { success: false, data: [] };
       const softwareMapData: Record<string, Software> = {};
-      if (Array.isArray(allSoftware)) {
-        allSoftware.forEach((s) => {
+      
+      if (Array.isArray(softwareRes.data)) {
+        softwareRes.data.forEach((s: Software) => {
           softwareMapData[s.id] = s;
         });
       }
       setSoftwareMap(softwareMapData);
       
     } catch (error) {
-      console.error("Dashboard Load Error:", error);
-      // මෙතනදී ටෝස්ට් එක අයින් කළා User ට කරදර නොවෙන්න
+      console.error("MySQL Dashboard Load Error:", error);
     } finally {
       setIsLoading(false);
     }
