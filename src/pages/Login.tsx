@@ -18,11 +18,9 @@ export default function Login({ onNavigate }: LoginProps) {
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setIsLoading(true);
-
-  try {
-    // මෙන්න මෙතන තමයි වැරැද්ද තිබුණේ. 
-    // අපි පරීක්ෂා කරමු email සහ password කියන state දෙකේ අගයන් තියෙනවද කියලා.
-    console.log("Form States - Email:", email, "Password:", password);
+  
+  // මෙන්න මෙහෙමයි call කරන්න ඕනේ
+  const result = await authService.login({ email, password });
 
     // කෙලින්ම අගයන් දෙක object එකක් විදිහට යවමු
     const loginData = {
