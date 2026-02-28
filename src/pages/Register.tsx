@@ -34,7 +34,43 @@ export default function Register({ onNavigate }: RegisterProps) {
     return () => clearInterval(interval);
   }, [step, resendTimer]);
 
-  const handleSendOTP = async (e: React.FormEvent) => {
+  const handleResend = async () => {
+    if (resendTimer > 0) return;
+    setIsLoading(true);
+    try {
+      // අලුත් 6-digit OTP එකක් හදනවා
+      const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      const result = await sendOTP(formData.email, newOtp); // email එකයි otp එකයි දෙකම යවන්න
+      if (result.success) {
+        toast({ title: 'OTP Resent', description: 'Please check your email.' });
+        setResendTimer(60); 
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // ----------------------------
+  const [otp, setOtp] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { register, sendOTP } = useAuth();
+  const { toast } = useToast();
+
+  const handleGoogleSuccess = (credentialResponse: any) => {
+    const decoded: any = jwtDecode(credentialResponse.credential);
+    setFormData({
+        ...formData,
+        fullName: decoded.name || '',
+        email: decoded.email || '',
+    });
+    toast({
+        title: 'Google Connected',
+        description: 'Name and Email imported. Please fill other details.',
+    });
+};
+
+ const handleSendOTP = async (e: React.FormEvent) => {
   e.preventDefault();
   if (formData.password !== formData.confirmPassword) {
     toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
@@ -60,51 +96,6 @@ export default function Register({ onNavigate }: RegisterProps) {
     setIsLoading(false);
   }
 };
-  // ----------------------------
-  const [otp, setOtp] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { register, sendOTP } = useAuth();
-  const { toast } = useToast();
-
-  const handleGoogleSuccess = (credentialResponse: any) => {
-    const decoded: any = jwtDecode(credentialResponse.credential);
-    setFormData({
-        ...formData,
-        fullName: decoded.name || '',
-        email: decoded.email || '',
-    });
-    toast({
-        title: 'Google Connected',
-        description: 'Name and Email imported. Please fill other details.',
-    });
-};
-
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      const result = await sendOTP(formData.email, generatedOtp); 
-      
-      if (result.success) {
-        toast({ title: 'OTP Sent!', description: `Verification code sent to ${formData.email}` });
-        setResendTimer(60);
-        setStep('otp');
-      } else {
-        toast({ title: 'Failed', description: result.message, variant: 'destructive' });
-      }
-    } catch (error) {
-      toast({ title: 'Connection Error', description: 'Could not connect to server.', variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleContinue = async (e: React.FormEvent) => {
   e.preventDefault();
