@@ -7,42 +7,29 @@ class AuthService {
   try {
     console.log("--- [STEP 4] authService: Starting Fetch ---");
     
-    // 1. අපි කෙලින්ම VPS Backend URL එක මෙතනට දාමු (Variables වල ලෙඩ මගහරින්න)
-    const backendUrl = "http://c4ckkocookws8kg4wc8ckow8.65.108.212.204.sslip.io/api/send-otp";
+    // අපි දැන් කෙලින්ම Google Script එකට දත්ත යවමු (VPS එකේ Port issues මගහරින්න)
+    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbxDBtNzkGL685gbIA6foL6FyD-JE7usPQ32mtw1_QuM4KZo_GkZvsXSvA3pQzc41psHXA/exec";
     
-    console.log("Request URL:", backendUrl);
-    console.log("Payload:", { email, otp });
-
-    // 2. Fetch Request එක යවනවා
-    const response = await fetch(backendUrl, {
+    const response = await fetch(googleScriptUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'text/plain;charset=utf-8',
       },
       body: JSON.stringify({ email, otp }),
     });
 
-    console.log("Fetch Status:", response.status);
+    const resultText = await response.text();
+    console.log("Response from Script:", resultText);
 
-    // 3. Response එක කියවනවා
-    const data = await response.json();
-    console.log("Backend Response Data:", data);
-
-    if (response.ok && data.success) {
-      // Frontend එකේ Verification එක සඳහා OTP එක තාවකාලිකව මතක තබා ගමු
-      OTP_STORE[email] = { 
-        otp, 
-        expiresAt: Date.now() + 10 * 60 * 1000 
-      };
-      console.log("OTP_STORE updated successfully");
-      return { success: true, message: 'OTP sent to your email.' };
+    if (resultText.includes("Success")) {
+      // වැදගත්: OTP_STORE වෙනුවට sessionStorage පාවිච්චි කරන්න
+      sessionStorage.setItem('rv_temp_otp', otp); 
+      
+      return { success: true, message: 'OTP sent successfully!' };
     } else {
-      console.warn("Backend returned failure:", data.message);
-      return { success: false, message: data.message || 'Failed to send OTP.' };
+      return { success: false, message: 'Failed to send OTP. Please check your email.' };
     }
-
-  } catch (error) {
-    // Network එකේ මොකක් හරි ලොකු අවුලක් නම් මෙතනින් පේනවා
+  } catch (error: any) {
     console.error("--- [CRITICAL] authService Fetch Error ---", error);
     return { success: false, message: 'Server connection error. Please try again.' };
   }
