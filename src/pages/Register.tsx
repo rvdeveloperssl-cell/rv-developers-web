@@ -35,19 +35,21 @@ export default function Register({ onNavigate }: RegisterProps) {
   }, [step, resendTimer]);
 
   const handleResend = async () => {
-  if (resendTimer > 0) return;
-  setIsLoading(true);
-  try {
-    // මෙතනත් email එක විතරක් යවන්න
-    const result = await sendOTP(formData.email);
-    if (result.success) {
-      toast({ title: 'OTP Resent', description: 'Please check your email.' });
-      setResendTimer(60); 
+    if (resendTimer > 0) return;
+    setIsLoading(true);
+    try {
+      // අලුත් 6-digit OTP එකක් හදනවා
+      const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      const result = await sendOTP(formData.email, newOtp); // email එකයි otp එකයි දෙකම යවන්න
+      if (result.success) {
+        toast({ title: 'OTP Resent', description: 'Please check your email.' });
+        setResendTimer(60); 
+      }
+    } finally {
+      setIsLoading(false);
     }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
   // ----------------------------
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -69,43 +71,30 @@ export default function Register({ onNavigate }: RegisterProps) {
 };
 
   const handleSendOTP = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (formData.password !== formData.confirmPassword) {
-    toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    // AuthContext එකෙන් එන sendOTP එක call කරනවා
-    const result = await sendOTP(formData.email); 
-    
-    if (result.success) {
-      toast({ 
-        title: 'OTP Sent!', 
-        description: `We've sent a 6-digit code to ${formData.email}`,
-      });
-      setResendTimer(60);
-      setStep('otp'); // OTP ඇතුළත් කරන පියවරට යනවා
-    } else {
-      toast({ 
-        title: 'Failed', 
-        description: result.message, 
-        variant: 'destructive' 
-      });
+    e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
+      return;
     }
-  } catch (error) {
-    toast({ 
-      title: 'Connection Error', 
-      description: 'Could not connect to the server.', 
-      variant: 'destructive' 
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+
+    setIsLoading(true);
+    try {
+      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const result = await sendOTP(formData.email, generatedOtp); 
+      
+      if (result.success) {
+        toast({ title: 'OTP Sent!', description: `Verification code sent to ${formData.email}` });
+        setResendTimer(60);
+        setStep('otp');
+      } else {
+        toast({ title: 'Failed', description: result.message, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Connection Error', description: 'Could not connect to server.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleContinue = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -141,6 +130,62 @@ export default function Register({ onNavigate }: RegisterProps) {
     setIsLoading(false);
   }
 };
+
+ const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // 1. Session Storage එකේ අපි කලින් සේව් කරපු OTP එක ගන්නවා
+      const savedOtp = sessionStorage.getItem('rv_temp_otp');
+
+      // 2. යූසර් ගහපු OTP එකයි, සේව් වෙලා තියෙන එකයි සසඳනවා
+      if (otp !== savedOtp) {
+        toast({
+          title: 'Verification Failed',
+          description: 'The OTP you entered is incorrect.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. OTP එක හරි නම්, දැන් දත්ත ටික MySQL Backend එකට යවනවා
+      console.log("OTP Verified! Registering user...");
+      const result = await register(formData);
+
+      if (result.success) {
+        toast({
+          title: 'Registration Successful!',
+          description: 'Your account has been created. Redirecting to login...',
+        });
+        
+        // වැඩේ ඉවර නිසා තාවකාලික දත්ත අයින් කරනවා
+        sessionStorage.removeItem('rv_temp_otp');
+
+        setTimeout(() => {
+          onNavigate('login');
+        }, 2000);
+      } else {
+        toast({
+          title: 'Registration Failed',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error("Registration Process Error:", error);
+      toast({
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  
 
   const renderDetailsForm = () => (
     <form onSubmit={handleSendOTP} className="space-y-4">
