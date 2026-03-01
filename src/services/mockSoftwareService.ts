@@ -32,21 +32,29 @@ class SoftwareService {
     }
   }
 
-  // 2. ID එක අනුව ලබා ගැනීම
-  async getSoftwareById(id: string): Promise<Software | null> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/software/${id}`);
-      if (!response.ok) return null;
-      const s = await response.json();
-      return {
-        ...s,
-        features: typeof s.features === 'string' ? JSON.parse(s.features) : s.features,
-        isFree: s.isFree === 1 || s.isFree === true,
-      };
-    } catch (error) {
-      return null;
-    }
+  // 2. ID එක අනුව ලබා ගැනීම (මෙතනයි වැරද්ද තිබුණේ)
+async getSoftwareById(id: string): Promise<Software | null> {
+  try {
+    // API_BASE_URL වෙනුවට අපි හදාගත්ත cleanUrl එකම පාවිච්චි කරන්න
+    const response = await fetch(cleanUrl(`/api/software/${id}`));
+    
+    if (!response.ok) return null;
+    
+    const s = await response.json();
+    
+    // දත්ත ටික පිරිසිදු කරලා හරියටම return කරනවා
+    return {
+      ...s,
+      id: s.id.toString(), // ID එක අනිවාර්යයෙන්ම string කරනවා
+      features: typeof s.features === 'string' ? JSON.parse(s.features) : s.features,
+      isFree: s.isFree === 1 || s.isFree === true,
+      price: s.price || 0
+    };
+  } catch (error) {
+    console.error("Error fetching software by ID:", error);
+    return null;
   }
+}
 
   // 3. දැනට තියෙන software වලින් categories ටික වෙන් කරලා ගැනීම
   async getCategories(): Promise<Category[]> {
