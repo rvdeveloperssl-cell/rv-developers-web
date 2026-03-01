@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, Search, X, Smile } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Smile, Link as LinkIcon } from 'lucide-react';
 import type { Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
-// Use environment variable from Coolify
+// Environment variable with /api suffix
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 interface AdminSoftwareProps {
@@ -25,7 +25,6 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  // Updated formData to match your MySQL Schema exactly
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -34,10 +33,11 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     category: '',
     imageUrl: '',
     systemRequirements: '',
-    downloadUrl: '',
+    downloadUrl: '', // Main Desktop Link
+    mobileAppUrl: '', // New field for Mobile App
+    extraLink: '',    // New field for Additional Files/Docs
     isFree: false,
     isActive: true,
-    requiresFirebase: false, // UI requirement
     features: [''],
   });
 
@@ -45,11 +45,11 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     loadSoftware();
   }, []);
 
-  // LOAD DATA FROM MYSQL
   const loadSoftware = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/software`);
+      // API URL corrected to include /api
+      const response = await fetch(`${API_BASE_URL}/api/software`);
       if (!response.ok) throw new Error('Failed to fetch from DB');
       const data = await response.json();
       setSoftware(data);
@@ -64,21 +64,20 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     }
   };
 
-  // SAVE DATA TO MYSQL (CREATE & UPDATE)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const method = editingSoftware ? 'PUT' : 'POST';
+      // API URL corrected to include /api
       const url = editingSoftware 
-        ? `${API_BASE_URL}/software/${editingSoftware.id}` 
-        : `${API_BASE_URL}/software`;
+        ? `${API_BASE_URL}/api/software/${editingSoftware.id}` 
+        : `${API_BASE_URL}/api/software`;
 
       const response = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          // If software is free, force price to 0
           price: formData.isFree ? 0 : formData.price,
           features: JSON.stringify(formData.features.filter((f) => f.trim() !== ''))
         }),
@@ -104,12 +103,11 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     }
   };
 
-  // DELETE DATA FROM MYSQL
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this software from MySQL?')) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/software/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/software/${id}`, {
         method: 'DELETE',
       });
 
@@ -136,9 +134,10 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       imageUrl: '',
       systemRequirements: '',
       downloadUrl: '',
+      mobileAppUrl: '',
+      extraLink: '',
       isFree: false,
       isActive: true,
-      requiresFirebase: false,
       features: [''],
     });
     setEditingSoftware(null);
@@ -155,9 +154,10 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       imageUrl: s.imageUrl,
       systemRequirements: s.systemRequirements || '',
       downloadUrl: s.downloadUrl || '',
+      mobileAppUrl: s.mobileAppUrl || '',
+      extraLink: s.extraLink || '',
       isFree: s.isFree === 1 || s.isFree === true,
       isActive: s.isActive === 1 || s.isActive === true,
-      requiresFirebase: s.requiresFirebase || false,
       features: s.features ? (typeof s.features === 'string' ? JSON.parse(s.features) : s.features) : [''],
     });
     setIsDialogOpen(true);
@@ -200,7 +200,6 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="rv-input"
-                      placeholder="e.g. RV PRO POS ULTRA"
                       required
                     />
                   </div>
@@ -216,11 +215,10 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                   </div>
                 </div>
 
-                {/* Description with Emoji Support */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-sm font-medium">Description</label>
-                    <span className="text-[10px] text-[#A7ACB8]">Tip: Use Win + . for emojis ✨</span>
+                    <span className="text-[10px] text-[#A7ACB8]">Shortcut: Win + . (Period) for Emojis 🚀</span>
                   </div>
                   <div className="relative">
                     <textarea
@@ -228,7 +226,6 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="rv-input resize-none pr-10"
                       rows={4}
-                      placeholder="Describe your software... Add emojis for a cool look! 🚀"
                       required
                     />
                     <Smile className="absolute right-3 top-3 w-5 h-5 text-[#4F46E5] opacity-50" />
@@ -247,7 +244,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Image URL</label>
+                    <label className="block text-sm font-medium mb-2">Main Image URL</label>
                     <input
                       type="url"
                       value={formData.imageUrl}
@@ -258,28 +255,50 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="rv-panel p-4 space-y-4 bg-white/5 border-dashed border-white/10">
+                   <h3 className="text-sm font-bold flex items-center gap-2"><LinkIcon className="w-4 h-4 text-blue-400" /> Package Download Links</h3>
+                   <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-[#A7ACB8] mb-1">Desktop App URL</label>
+                      <input
+                        type="url"
+                        value={formData.downloadUrl}
+                        onChange={(e) => setFormData({ ...formData, downloadUrl: e.target.value })}
+                        className="rv-input text-sm"
+                        placeholder="exe/msi link"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#A7ACB8] mb-1">Mobile App URL</label>
+                      <input
+                        type="url"
+                        value={formData.mobileAppUrl}
+                        onChange={(e) => setFormData({ ...formData, mobileAppUrl: e.target.value })}
+                        className="rv-input text-sm"
+                        placeholder="apk link"
+                      />
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Download URL</label>
+                    <label className="block text-xs text-[#A7ACB8] mb-1">Extra Resource / Manual Link</label>
                     <input
                       type="url"
-                      value={formData.downloadUrl}
-                      onChange={(e) => setFormData({ ...formData, downloadUrl: e.target.value })}
-                      className="rv-input"
-                      placeholder="Direct link to setup file"
+                      value={formData.extraLink}
+                      onChange={(e) => setFormData({ ...formData, extraLink: e.target.value })}
+                      className="rv-input text-sm"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">System Requirements</label>
-                    <input
-                      type="text"
-                      value={formData.systemRequirements}
-                      onChange={(e) => setFormData({ ...formData, systemRequirements: e.target.value })}
-                      className="rv-input"
-                      placeholder="e.g. Windows 10, 4GB RAM"
-                      required
-                    />
-                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">System Requirements</label>
+                  <input
+                    type="text"
+                    value={formData.systemRequirements}
+                    onChange={(e) => setFormData({ ...formData, systemRequirements: e.target.value })}
+                    className="rv-input"
+                    required
+                  />
                 </div>
 
                 <div className="flex items-center gap-6 py-2">
@@ -291,16 +310,6 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                       className="rounded border-[rgba(244,246,255,0.2)] bg-[#05060B]"
                     />
                     <span className="text-sm">Free Software</span>
-                  </label>
-                  
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.requiresFirebase}
-                      onChange={(e) => setFormData({ ...formData, requiresFirebase: e.target.checked })}
-                      className="rounded border-[rgba(244,246,255,0.2)] bg-[#05060B]"
-                    />
-                    <span className="text-sm">Requires Firebase</span>
                   </label>
 
                   {!formData.isFree && (
