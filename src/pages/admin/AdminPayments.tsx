@@ -202,25 +202,28 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
                     {new Date(purchase.createdAt).toLocaleDateString()}
                   </td>
                   <td className="py-4 px-4">
-                    {purchase.paymentStatus === 'pending' && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleVerify(purchase.id)}
-                          className="p-2 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25"
-                          title="Verify"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleReject(purchase.id)}
-                          className="p-2 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25"
-                          title="Reject"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                    {/* 2. View Slip Button - Slip URL එකක් තියෙනවා නම් පෙන්වන්න */}
+  <div className="flex items-center gap-2">
+    {/* 1. Verify/Reject Buttons - Pending නම් විතරක් පෙන්වන්න */}
+    {purchase.paymentStatus === 'pending' && (
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleVerify(purchase.id)}
+          className="p-2 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25"
+          title="Verify"
+        >
+          <Check className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => handleReject(purchase.id)}
+          className="p-2 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25"
+          title="Reject"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    )}
+
+    {/* 2. View Slip Button - Slip URL එකක් තියෙනවා නම් පෙන්වන්න */}
     {purchase.slipUrl && (
       <button
         type="button"
