@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
-import { softwareService } from '@/services/mockSoftwareService';
+import { Plus, Edit2, Trash2, Search, X, Smile } from 'lucide-react';
 import type { Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -11,6 +10,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
+// Use environment variable from Coolify
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 interface AdminSoftwareProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
 }
@@ -18,11 +20,12 @@ interface AdminSoftwareProps {
 export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftwareProps) {
   const [software, setSoftware] = useState<Software[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingSoftware, setEditingSoftware] = useState<Software | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // Updated formData to match your MySQL Schema exactly
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -31,8 +34,10 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     category: '',
     imageUrl: '',
     systemRequirements: '',
+    downloadUrl: '',
     isFree: false,
-    requiresFirebase: false,
+    isActive: true,
+    requiresFirebase: false, // UI requirement
     features: [''],
   });
 
@@ -40,15 +45,18 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     loadSoftware();
   }, []);
 
+  // LOAD DATA FROM MYSQL
   const loadSoftware = async () => {
     setIsLoading(true);
     try {
-      const data = await softwareService.getAllSoftware();
+      const response = await fetch(`${API_BASE_URL}/software`);
+      if (!response.ok) throw new Error('Failed to fetch from DB');
+      const data = await response.json();
       setSoftware(data);
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to load software',
+        description: 'Failed to load software from MySQL database',
         variant: 'destructive',
       });
     } finally {
@@ -56,41 +64,59 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     }
   };
 
+  // SAVE DATA TO MYSQL (CREATE & UPDATE)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const data = {
-        ...formData,
-        features: formData.features.filter((f) => f.trim() !== ''),
-      };
+      const method = editingSoftware ? 'PUT' : 'POST';
+      const url = editingSoftware 
+        ? `${API_BASE_URL}/software/${editingSoftware.id}` 
+        : `${API_BASE_URL}/software`;
 
-      if (editingSoftware) {
-        await softwareService.updateSoftware(editingSoftware.id, data);
-        toast({ title: 'Success', description: 'Software updated successfully' });
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          // If software is free, force price to 0
+          price: formData.isFree ? 0 : formData.price,
+          features: JSON.stringify(formData.features.filter((f) => f.trim() !== ''))
+        }),
+      });
+
+      if (response.ok) {
+        toast({ 
+          title: 'Success', 
+          description: editingSoftware ? 'Software updated in MySQL' : 'Software added to MySQL' 
+        });
+        setIsDialogOpen(false);
+        resetForm();
+        loadSoftware();
       } else {
-        await softwareService.createSoftware(data);
-        toast({ title: 'Success', description: 'Software created successfully' });
+        throw new Error('Save failed');
       }
-
-      setIsDialogOpen(false);
-      resetForm();
-      loadSoftware();
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to save software',
+        description: 'Failed to save software to database',
         variant: 'destructive',
       });
     }
   };
 
+  // DELETE DATA FROM MYSQL
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this software?')) return;
+    if (!confirm('Are you sure you want to delete this software from MySQL?')) return;
 
     try {
-      await softwareService.deleteSoftware(id);
-      toast({ title: 'Success', description: 'Software deleted successfully' });
-      loadSoftware();
+      const response = await fetch(`${API_BASE_URL}/software/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast({ title: 'Success', description: 'Software deleted successfully' });
+        loadSoftware();
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -109,25 +135,30 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       category: '',
       imageUrl: '',
       systemRequirements: '',
+      downloadUrl: '',
       isFree: false,
+      isActive: true,
       requiresFirebase: false,
       features: [''],
     });
     setEditingSoftware(null);
   };
 
-  const openEditDialog = (s: Software) => {
+  const openEditDialog = (s: any) => {
     setEditingSoftware(s);
     setFormData({
       name: s.name,
-      description: s.description,
+      description: s.description || '',
       price: s.price,
       version: s.version,
       category: s.category,
       imageUrl: s.imageUrl,
-      systemRequirements: s.systemRequirements,
-      isFree: s.isFree,
-      features: s.features.length > 0 ? s.features : [''],
+      systemRequirements: s.systemRequirements || '',
+      downloadUrl: s.downloadUrl || '',
+      isFree: s.isFree === 1 || s.isFree === true,
+      isActive: s.isActive === 1 || s.isActive === true,
+      requiresFirebase: s.requiresFirebase || false,
+      features: s.features ? (typeof s.features === 'string' ? JSON.parse(s.features) : s.features) : [''],
     });
     setIsDialogOpen(true);
   };
@@ -145,7 +176,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-[#F4F6FF]">Software Management</h1>
-            <p className="text-[#A7ACB8] mt-1">Manage your software products</p>
+            <p className="text-[#A7ACB8] mt-1">Manage your products in MySQL Database</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -163,12 +194,13 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
               <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Name</label>
+                    <label className="block text-sm font-medium mb-2">Software Name</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="rv-input"
+                      placeholder="e.g. RV PRO POS ULTRA"
                       required
                     />
                   </div>
@@ -184,15 +216,23 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                   </div>
                 </div>
 
+                {/* Description with Emoji Support */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="rv-input resize-none"
-                    rows={3}
-                    required
-                  />
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium">Description</label>
+                    <span className="text-[10px] text-[#A7ACB8]">Tip: Use Win + . for emojis ✨</span>
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="rv-input resize-none pr-10"
+                      rows={4}
+                      placeholder="Describe your software... Add emojis for a cool look! 🚀"
+                      required
+                    />
+                    <Smile className="absolute right-3 top-3 w-5 h-5 text-[#4F46E5] opacity-50" />
+                  </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -218,28 +258,51 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Download URL</label>
+                    <input
+                      type="url"
+                      value={formData.downloadUrl}
+                      onChange={(e) => setFormData({ ...formData, downloadUrl: e.target.value })}
+                      className="rv-input"
+                      placeholder="Direct link to setup file"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">System Requirements</label>
+                    <input
+                      type="text"
+                      value={formData.systemRequirements}
+                      onChange={(e) => setFormData({ ...formData, systemRequirements: e.target.value })}
+                      className="rv-input"
+                      placeholder="e.g. Windows 10, 4GB RAM"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 py-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formData.isFree}
                       onChange={(e) => setFormData({ ...formData, isFree: e.target.checked })}
-                      className="rounded border-[rgba(244,246,255,0.2)]"
+                      className="rounded border-[rgba(244,246,255,0.2)] bg-[#05060B]"
                     />
                     <span className="text-sm">Free Software</span>
                   </label>
-                  {/* --- අලුතින් එක් කරන කොටස --- */}
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input
-        type="checkbox"
-        checked={formData.requiresFirebase}
-        onChange={(e) => setFormData({ ...formData, requiresFirebase: e.target.checked })}
-        className="rounded border-[rgba(244,246,255,0.2)] bg-[#05060B]"
-      />
-      <span className="text-sm text-[#F4F6FF]">Requires Firebase Setup</span>
-    </label>
-    {/* --------------------------- */}
-  
+                  
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.requiresFirebase}
+                      onChange={(e) => setFormData({ ...formData, requiresFirebase: e.target.checked })}
+                      className="rounded border-[rgba(244,246,255,0.2)] bg-[#05060B]"
+                    />
+                    <span className="text-sm">Requires Firebase</span>
+                  </label>
+
                   {!formData.isFree && (
                     <div className="flex-grow">
                       <input
@@ -255,18 +318,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">System Requirements</label>
-                  <input
-                    type="text"
-                    value={formData.systemRequirements}
-                    onChange={(e) => setFormData({ ...formData, systemRequirements: e.target.value })}
-                    className="rv-input"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Features</label>
+                  <label className="block text-sm font-medium mb-2">Key Features</label>
                   {formData.features.map((feature, index) => (
                     <div key={index} className="flex gap-2 mb-2">
                       <input
@@ -306,7 +358,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
 
                 <div className="flex gap-4 pt-4">
                   <button type="submit" className="rv-btn-primary flex-1">
-                    {editingSoftware ? 'Update' : 'Create'}
+                    {editingSoftware ? 'Update Database' : 'Save to MySQL'}
                   </button>
                   <button
                     type="button"
@@ -327,7 +379,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A7ACB8]" />
             <input
               type="text"
-              placeholder="Search software..."
+              placeholder="Search in MySQL..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="rv-input pl-12"
@@ -335,62 +387,64 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
           </div>
         </div>
 
-        {/* Software Table */}
+        {/* Table View */}
         <div className="rv-panel overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[rgba(244,246,255,0.08)]">
-                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Software</th>
-                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Category</th>
-                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Price</th>
-                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Version</th>
-                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Downloads</th>
-                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSoftware.map((s) => (
-                <tr key={s.id} className="border-b border-[rgba(244,246,255,0.05)]">
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={s.imageUrl}
-                        alt={s.name}
-                        className="w-10 h-10 rounded-lg object-cover"
-                      />
-                      <span className="text-[#F4F6FF] font-medium">{s.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-[#A7ACB8]">{s.category}</td>
-                  <td className="py-4 px-4">
-                    {s.isFree ? (
-                      <span className="text-green-400">Free</span>
-                    ) : (
-                      <span className="text-[#F4F6FF]">LKR {s.price.toLocaleString()}</span>
-                    )}
-                  </td>
-                  <td className="py-4 px-4 text-[#A7ACB8]">{s.version}</td>
-                  <td className="py-4 px-4 text-[#A7ACB8]">{s.downloadCount.toLocaleString()}</td>
-                  <td className="py-4 px-4">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => openEditDialog(s)}
-                        className="p-2 rounded-lg bg-[rgba(79,70,229,0.15)] text-[#4F46E5] hover:bg-[rgba(79,70,229,0.25)] transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(s.id)}
-                        className="p-2 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+          {isLoading ? (
+            <div className="p-8 text-center text-[#A7ACB8]">Connecting to MySQL...</div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[rgba(244,246,255,0.08)]">
+                  <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Software</th>
+                  <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Category</th>
+                  <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Price</th>
+                  <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Version</th>
+                  <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredSoftware.map((s: any) => (
+                  <tr key={s.id} className="border-b border-[rgba(244,246,255,0.05)] hover:bg-white/[0.02]">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={s.imageUrl}
+                          alt={s.name}
+                          className="w-10 h-10 rounded-lg object-cover bg-[#0B0E16]"
+                        />
+                        <span className="text-[#F4F6FF] font-medium">{s.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-[#A7ACB8]">{s.category}</td>
+                    <td className="py-4 px-4">
+                      {s.isFree ? (
+                        <span className="text-green-400">Free</span>
+                      ) : (
+                        <span className="text-[#F4F6FF]">LKR {Number(s.price).toLocaleString()}</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4 text-[#A7ACB8]">{s.version}</td>
+                    <td className="py-4 px-4">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openEditDialog(s)}
+                          className="p-2 rounded-lg bg-[rgba(79,70,229,0.15)] text-[#4F46E5] hover:bg-[rgba(79,70,229,0.25)] transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(s.id)}
+                          className="p-2 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
