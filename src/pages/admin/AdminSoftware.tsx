@@ -45,64 +45,72 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     loadSoftware();
   }, []);
 
-  const loadSoftware = async () => {
-    setIsLoading(true);
-    try {
-      // API URL corrected to include /api
-      const response = await fetch(`${API_BASE_URL}/api/software`);
-      if (!response.ok) throw new Error('Failed to fetch from DB');
-      const data = await response.json();
-      setSoftware(data);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load software from MySQL database',
-        variant: 'destructive',
+  // URL එකේ slashes ප්‍රශ්නය විසඳන function එක
+const getApiUrl = (endpoint: string) => {
+  // API_BASE_URL එකේ අගට / තිබුණොත් ඒක අයින් කරලා endpoint එක එකතු කරනවා
+  const base = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+  return `${base}${endpoint}`;
+};
+
+const loadSoftware = async () => {
+  setIsLoading(true);
+  try {
+    // getApiUrl පාවිච්චි කරලා URL එක නිවැරදිව ගන්නවා
+    const response = await fetch(getApiUrl('/api/software'));
+    if (!response.ok) throw new Error('Failed to fetch from DB');
+    const data = await response.json();
+    setSoftware(data);
+  } catch (error) {
+    toast({
+      title: 'Error',
+      description: 'Failed to load software from MySQL database',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    const method = editingSoftware ? 'PUT' : 'POST';
+    
+    // URL එක හදන තැනටත් getApiUrl පාවිච්චි කළා
+    const url = editingSoftware 
+      ? getApiUrl(`/api/software/${editingSoftware.id}`) 
+      : getApiUrl('/api/software');
+
+    const response = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...formData,
+        price: formData.isFree ? 0 : formData.price,
+        // Array එකක් විදිහටම යවනවා (Backend එකේ JSON.stringify කරන නිසා)
+        features: formData.features.filter((f) => f.trim() !== '') 
+      }),
+    });
+
+    if (response.ok) {
+      toast({ 
+        title: 'Success', 
+        description: editingSoftware ? 'Software updated in MySQL' : 'Software added to MySQL' 
       });
-    } finally {
-      setIsLoading(false);
+      setIsDialogOpen(false);
+      resetForm();
+      loadSoftware();
+    } else {
+      throw new Error('Save failed');
     }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const method = editingSoftware ? 'PUT' : 'POST';
-      // API URL corrected to include /api
-      const url = editingSoftware 
-        ? `${API_BASE_URL}/api/software/${editingSoftware.id}` 
-        : `${API_BASE_URL}/api/software`;
-
-      const response = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-  ...formData,
-  price: formData.isFree ? 0 : formData.price,
-  // features array එකක් විදිහටම යවන්න, backend එකෙන් ඒක stringify කරගනියි
-  features: formData.features.filter((f) => f.trim() !== '') 
-}),
-      });
-
-      if (response.ok) {
-        toast({ 
-          title: 'Success', 
-          description: editingSoftware ? 'Software updated in MySQL' : 'Software added to MySQL' 
-        });
-        setIsDialogOpen(false);
-        resetForm();
-        loadSoftware();
-      } else {
-        throw new Error('Save failed');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save software to database',
-        variant: 'destructive',
-      });
-    }
-  };
+  } catch (error) {
+    toast({
+      title: 'Error',
+      description: 'Failed to save software to database',
+      variant: 'destructive',
+    });
+  }
+};
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this software from MySQL?')) return;
