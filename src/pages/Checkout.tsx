@@ -117,7 +117,7 @@ export default function Checkout({ softwareId, onNavigate }: CheckoutProps) {
 
     // --- පියවර 2: ලැබුණු URL එක Backend එකට යැවීම ---
     // මෙතනදී අපි slipFile එක වෙනුවට directImageUrl එක යවනවා
-    const result = await paymentService.submitBankTransfer(user.id, software.id, directImageUrl);
+   const result = await paymentService.submitBankTransfer(user.id, software.id, directImageUrl);
 
     if (result.success) {
       toast({
