@@ -23,27 +23,18 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
   const loadData = async () => {
   setIsLoading(true);
   try {
-    // MySQL API එකෙන් සියලුම Software ගන්නවා
-    const softwareData = await softwareService.getAllSoftware();
+    // softwareService එක ඇතුළේ දැන් cleanUrl තියෙන නිසා ප්‍රශ්නයක් වෙන්නේ නැහැ
+    const [softwareData, categoriesData] = await Promise.all([
+      softwareService.getAllSoftware(),
+      softwareService.getCategories(),
+    ]);
     
-    // Software data ටික state එකට දානවා
     setSoftware(softwareData);
-
-    // Categories ටිකත් API එකෙන් වෙනමම ගන්නවා (ඔයා ලියපු විදිහටම)
-    // හැබැයි API එකේ ප්‍රශ්නයක් වුණොත් Catalog එකම ලෝඩ් නොවී තියෙන එක නවත්තන්න මම මේක වෙනම දැම්මා
-    try {
-      const categoriesData = await softwareService.getCategories();
-      setCategories(categoriesData);
-    } catch (catError) {
-      console.error("Categories load error:", catError);
-      // Categories බැරි වුණොත් විතරක් default category එකක් හරි පෙන්වන්න පුළුවන්
-    }
-
+    setCategories(categoriesData);
   } catch (error) {
-    console.error("Main data load error:", error);
     toast({
-      title: 'Database Error',
-      description: 'MySQL දත්ත ලබා ගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.',
+      title: 'Connection Error',
+      description: 'MySQL Clients cannot connect.',
       variant: 'destructive',
     });
   } finally {
