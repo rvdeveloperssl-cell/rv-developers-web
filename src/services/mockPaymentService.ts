@@ -1,249 +1,166 @@
 import type { Purchase, Invoice } from '@/types';
-import { mockPurchases, mockInvoices, mockSoftware } from '@/data/mockData';
-import { licenseService } from './licenseService';
+
+// Backend එකේ URL එක .env එකෙන් ගන්නවා. නැත්නම් localhost:8080 පාවිච්චි කරනවා.
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 class MockPaymentService {
-  private generateInvoiceNumber(): string {
-    const prefix = 'INV';
-    const year = new Date().getFullYear();
-    const random = Math.floor(1000 + Math.random() * 9000);
-    return `${prefix}-${year}-${random}`;
+  // URL එක පිරිසිදුව සකස් කරගන්නා Helper එකක්
+  private cleanUrl(endpoint: string) {
+    const baseUrl = BASE.endsWith('/') ? BASE.slice(0, -1) : BASE;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    return `${baseUrl}${cleanEndpoint}`;
   }
 
+  // 1. Card Payment - Logic එක වෙනස් නොකර API එකට දත්ත යවනවා
   async processCardPayment(
     userId: string,
     softwareId: string,
-    cardData: { number: string; expiry: string; cvv: string }
+    cardData: { number: string; expiry: string; cvv: string; name: string }
   ): Promise<{ success: boolean; purchase?: Purchase; message: string }> {
-    return new Promise(async (resolve) => {
-      setTimeout(async () => {
-        const software = mockSoftware.find(s => s.id === softwareId);
-        if (!software) {
-          resolve({ success: false, message: 'Software not found' });
-          return;
-        }
-
-        // Simulate card validation
-        if (cardData.number.length < 16) {
-          resolve({ success: false, message: 'Invalid card number' });
-          return;
-        }
-
-        // Generate license for paid software
-        const license = await licenseService.generateLicense(softwareId, userId);
-
-        const purchase: Purchase = {
-          id: Math.random().toString(36).substring(2, 15),
-          userId,
-          softwareId,
-          licenseId: license.id,
-          amount: software.price,
-          paymentMethod: 'card',
-          paymentStatus: 'verified',
-          createdAt: new Date().toISOString(),
-          verifiedAt: new Date().toISOString()
-        };
-        mockPurchases.push(purchase);
-
-        // Generate invoice
-        const invoice: Invoice = {
-          id: Math.random().toString(36).substring(2, 15),
-          invoiceNumber: this.generateInvoiceNumber(),
-          userId,
-          purchaseId: purchase.id,
-          softwareId,
-          amount: software.price,
-          paymentMethod: 'card',
-          licenseKey: license.licenseKey,
-          createdAt: new Date().toISOString()
-        };
-        mockInvoices.push(invoice);
-        purchase.invoiceId = invoice.id;
-
-        resolve({ success: true, purchase, message: 'Payment successful' });
-      }, 2000);
-    });
+    try {
+      const response = await fetch(this.cleanUrl('/api/payments/card'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, softwareId, ...cardData }),
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: 'Card payment failed to connect to server' };
+    }
   }
 
+  // 2. Bank Transfer - Slip එක Upload කරන අතරතුර Database එකට දත්ත යවනවා
   async submitBankTransfer(
     userId: string,
     softwareId: string,
     slipFile: File
   ): Promise<{ success: boolean; purchase?: Purchase; message: string }> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const software = mockSoftware.find(s => s.id === softwareId);
-        if (!software) {
-          resolve({ success: false, message: 'Software not found' });
-          return;
-        }
+    // Image එකක් නිසා FormData පාවිච්චි කළ යුතුමයි
+    const formData = new FormData();
+    formData.append('userId', userId);
+    formData.append('softwareId', softwareId);
+    formData.append('slip', slipFile);
 
-        const purchase: Purchase = {
-          id: Math.random().toString(36).substring(2, 15),
-          userId,
-          softwareId,
-          amount: software.price,
-          paymentMethod: 'bank_transfer',
-          paymentStatus: 'pending',
-          slipUrl: `/uploads/${slipFile.name}`,
-          createdAt: new Date().toISOString()
-        };
-        mockPurchases.push(purchase);
-
-        resolve({ 
-          success: true, 
-          purchase, 
-          message: 'Bank slip submitted. Awaiting verification.' 
-        });
-      }, 1500);
-    });
+    try {
+      const response = await fetch(this.cleanUrl('/api/payments/bank-transfer'), {
+        method: 'POST',
+        body: formData, // JSON නෙවෙයි, FormData යවන්නේ
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: 'Failed to upload bank slip to server' };
+    }
   }
 
+  // 3. User හට අදාළ Purchases Database එකෙන් ලබා ගැනීම
   async getUserPurchases(userId: string): Promise<Purchase[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const purchases = mockPurchases.filter(p => p.userId === userId);
-        resolve(purchases.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      }, 400);
-    });
+    try {
+      const response = await fetch(this.cleanUrl(`/api/purchases/user/${userId}`));
+      return await response.json();
+    } catch (error) {
+      return [];
+    }
   }
 
+  // 4. User හට අදාළ Invoices Database එකෙන් ලබා ගැනීම
   async getUserInvoices(userId: string): Promise<Invoice[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const invoices = mockInvoices.filter(i => i.userId === userId);
-        resolve(invoices.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      }, 400);
-    });
+    try {
+      const response = await fetch(this.cleanUrl(`/api/invoices/user/${userId}`));
+      return await response.json();
+    } catch (error) {
+      return [];
+    }
   }
 
+  // 5. Invoice එකක් ID එකෙන් සෙවීම
   async getInvoiceById(invoiceId: string): Promise<Invoice | null> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const invoice = mockInvoices.find(i => i.id === invoiceId);
-        resolve(invoice || null);
-      }, 300);
-    });
+    try {
+      const response = await fetch(this.cleanUrl(`/api/invoices/${invoiceId}`));
+      return await response.json();
+    } catch (error) {
+      return null;
+    }
   }
 
-  // Admin methods
+  // --- ADMIN METHODS (MySQL Database එකේ Status Update කිරීමට) ---
+
+  // Admin ට පෙන්වීමට Pending Payments ලබා ගැනීම
   async getPendingPayments(): Promise<Purchase[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const pending = mockPurchases.filter(p => p.paymentStatus === 'pending');
-        resolve(pending);
-      }, 400);
-    });
+    try {
+      const response = await fetch(this.cleanUrl('/api/admin/payments/pending'));
+      return await response.json();
+    } catch (error) {
+      return [];
+    }
   }
 
+  // Payment එක Verify කර Invoice සහ License Generate කිරීම (Backend එකේ සිදුවේ)
   async verifyPayment(purchaseId: string, adminId: string): Promise<{ success: boolean; message: string }> {
-    return new Promise(async (resolve) => {
-      setTimeout(async () => {
-        const purchase = mockPurchases.find(p => p.id === purchaseId);
-        if (!purchase) {
-          resolve({ success: false, message: 'Purchase not found' });
-          return;
-        }
-
-        purchase.paymentStatus = 'verified';
-        purchase.verifiedAt = new Date().toISOString();
-        purchase.verifiedBy = adminId;
-
-        // Generate license after verification
-        const license = await licenseService.generateLicense(purchase.softwareId, purchase.userId);
-        purchase.licenseId = license.id;
-
-        // Generate invoice
-        const invoice: Invoice = {
-          id: Math.random().toString(36).substring(2, 15),
-          invoiceNumber: this.generateInvoiceNumber(),
-          userId: purchase.userId,
-          purchaseId: purchase.id,
-          softwareId: purchase.softwareId,
-          amount: purchase.amount,
-          paymentMethod: 'bank_transfer',
-          licenseKey: license.licenseKey,
-          createdAt: new Date().toISOString()
-        };
-        mockInvoices.push(invoice);
-        purchase.invoiceId = invoice.id;
-
-        resolve({ success: true, message: 'Payment verified successfully' });
-      }, 600);
-    });
+    try {
+      const response = await fetch(this.cleanUrl('/api/admin/verify-payment'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purchaseId, adminId }),
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: 'Verification process failed' };
+    }
   }
 
+  // Payment එක Reject කිරීම
   async rejectPayment(purchaseId: string, adminId: string, reason: string): Promise<{ success: boolean; message: string }> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const purchase = mockPurchases.find(p => p.id === purchaseId);
-        if (!purchase) {
-          resolve({ success: false, message: 'Purchase not found' });
-          return;
-        }
-
-        purchase.paymentStatus = 'rejected';
-        purchase.verifiedAt = new Date().toISOString();
-        purchase.verifiedBy = adminId;
-
-        resolve({ success: true, message: `Payment rejected: ${reason}` });
-      }, 600);
-    });
+    try {
+      const response = await fetch(this.cleanUrl('/api/admin/reject-payment'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purchaseId, adminId, reason }),
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: 'Rejection process failed' };
+    }
   }
 
+  // සේරම Purchases ලබා ගැනීම
   async getAllPurchases(): Promise<Purchase[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([...mockPurchases]);
-      }, 400);
-    });
+    try {
+      const response = await fetch(this.cleanUrl('/api/admin/purchases/all'));
+      return await response.json();
+    } catch (error) {
+      return [];
+    }
   }
 
+  // සේරම Invoices ලබා ගැනීම
   async getAllInvoices(): Promise<Invoice[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([...mockInvoices]);
-      }, 400);
-    });
+    try {
+      const response = await fetch(this.cleanUrl('/api/admin/invoices/all'));
+      return await response.json();
+    } catch (error) {
+      return [];
+    }
   }
 
+  // Revenue Report එක Database දත්ත ඇසුරෙන් සකස් කිරීම
   async generateRevenueReport(startDate: string, endDate: string): Promise<{
     totalRevenue: number;
     totalTransactions: number;
     byPaymentMethod: Record<string, number>;
     bySoftware: Record<string, number>;
   }> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const start = new Date(startDate).getTime();
-        const end = new Date(endDate).getTime();
-        
-        const filtered = mockPurchases.filter(p => {
-          const created = new Date(p.createdAt).getTime();
-          return created >= start && created <= end && p.paymentStatus === 'verified';
-        });
-
-        const totalRevenue = filtered.reduce((sum, p) => sum + p.amount, 0);
-        
-        const byPaymentMethod: Record<string, number> = {};
-        const bySoftware: Record<string, number> = {};
-
-        filtered.forEach(p => {
-          byPaymentMethod[p.paymentMethod] = (byPaymentMethod[p.paymentMethod] || 0) + p.amount;
-          const software = mockSoftware.find(s => s.id === p.softwareId);
-          const softwareName = software?.name || 'Unknown';
-          bySoftware[softwareName] = (bySoftware[softwareName] || 0) + p.amount;
-        });
-
-        resolve({
-          totalRevenue,
-          totalTransactions: filtered.length,
-          byPaymentMethod,
-          bySoftware
-        });
-      }, 600);
-    });
+    try {
+      const response = await fetch(this.cleanUrl('/api/admin/reports/revenue'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startDate, endDate }),
+      });
+      return await response.json();
+    } catch (error) {
+      return { totalRevenue: 0, totalTransactions: 0, byPaymentMethod: {}, bySoftware: {} };
+    }
   }
 }
 
+// RV Developers Brand එකට ගැලපෙන පරිදි Export කිරීම
 export const paymentService = new MockPaymentService();
