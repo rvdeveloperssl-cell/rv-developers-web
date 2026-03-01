@@ -27,10 +27,11 @@ export default function Checkout({ softwareId, onNavigate }: CheckoutProps) {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (softwareId) {
-      loadSoftware();
-    }
-  }, [softwareId]);
+  if (softwareId) {
+    // softwareId එක string එකක් බවට සහතික කරලා යවනවා
+    loadSoftware();
+  }
+}, [softwareId]);
 
   const loadSoftware = async () => {
     setIsLoading(true);
