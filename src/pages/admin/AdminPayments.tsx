@@ -6,6 +6,8 @@ import { mockUsers } from '@/data/mockData';
 import type { Purchase, Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+// Backend එකේ URL එක (ඔයාගේ Server එක Run වෙන Port එක)
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 interface AdminPaymentsProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
@@ -219,20 +221,20 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
                       </div>
                     )}
                     {purchase.slipUrl && (
-                      <button
-                        onClick={() => {
-                          toast({
-                            title: 'View Slip',
-                            description: 'Opening bank slip...',
-                          });
-                        }}
-                        className="p-2 rounded-lg bg-[rgba(79,70,229,0.15)] text-[#4F46E5] hover:bg-[rgba(79,70,229,0.25)]"
-                        title="View Slip"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </button>
-                    )}
-                  </td>
+      <button
+        onClick={() => {
+          // Backend URL එකයි Database එකේ තියෙන path එකයි එකතු කරලා අලුත් tab එකක open කරනවා
+          window.open(`${BASE}/${purchase.slipUrl}`, '_blank');
+        }}
+        className="p-2 rounded-lg bg-[rgba(79,70,229,0.15)] text-[#4F46E5] hover:bg-[rgba(79,70,229,0.25)] flex items-center gap-2"
+        title="View Bank Slip"
+      >
+        <FileText className="w-4 h-4" />
+        <span className="text-xs font-medium italic">Slip</span>
+      </button>
+    )}
+  </div>
+</td>
                 </tr>
               ))}
             </tbody>
