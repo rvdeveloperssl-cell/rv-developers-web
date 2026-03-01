@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Search, Check, X, CreditCard, Building2, FileText } from 'lucide-react';
+import { Search, Check, X, CreditCard, Building2, FileText, ExternalLink } from 'lucide-react';
 import { paymentService } from '@/services/mockPaymentService';
 import { softwareService } from '@/services/mockSoftwareService';
 import { mockUsers } from '@/data/mockData';
 import type { Purchase, Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-// Backend එකේ URL එක (ඔයාගේ Server එක Run වෙන Port එක)
+
+// Backend එකේ URL එක
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 interface AdminPaymentsProps {
@@ -18,6 +19,7 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
   const [softwareMap, setSoftwareMap] = useState<Record<string, Software>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [, setIsLoading] = useState(true);
+  const [selectedSlip, setSelectedSlip] = useState<string | null>(null); // Image Preview එක සඳහා
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -109,7 +111,7 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
     .reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <div className="min-h-screen pt-24 pb-16">
+    <div className="min-h-screen pt-24 pb-16 relative">
       <div className="rv-container">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -168,7 +170,12 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
             <tbody>
               {filteredPurchases.map((purchase) => (
                 <tr key={purchase.id} className="border-b border-[rgba(244,246,255,0.05)]">
-                  <td className="py-4 px-4 text-[#F4F6FF]">{getUserName(purchase.userId)}</td>
+                  <td className="py-4 px-4">
+                    <div className="flex flex-col">
+                      <span className="text-[#F4F6FF] font-medium">{getUserName(purchase.userId)}</span>
+                      <span className="text-[10px] text-[#A7ACB8] font-mono">{purchase.userId}</span>
+                    </div>
+                  </td>
                   <td className="py-4 px-4 text-[#F4F6FF]">
                     {softwareMap[purchase.softwareId]?.name || 'Unknown'}
                   </td>
@@ -202,52 +209,90 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
                     {new Date(purchase.createdAt).toLocaleDateString()}
                   </td>
                   <td className="py-4 px-4">
-  <div className="flex items-center gap-2">
-    {/* 1. Verify/Reject Buttons - Pending නම් විතරක් පෙන්වන්න */}
-    {purchase.paymentStatus === 'pending' && (
-      <div className="flex gap-2">
-        <button
-          onClick={() => handleVerify(purchase.id)}
-          className="p-2 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25"
-          title="Verify"
-        >
-          <Check className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => handleReject(purchase.id)}
-          className="p-2 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25"
-          title="Reject"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-    )}
+                    <div className="flex items-center gap-2">
+                      {purchase.paymentStatus === 'pending' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleVerify(purchase.id)}
+                            className="p-2 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25"
+                            title="Verify"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleReject(purchase.id)}
+                            className="p-2 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25"
+                            title="Reject"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
 
-    {/* 2. View Slip Button - Slip URL එකක් තියෙනවා නම් පෙන්වන්න */}
-    {purchase.slipUrl && (
-      <button
-        type="button"
-        onClick={() => {
-          const fullImageUrl = purchase.slipUrl.startsWith('http') 
-            ? purchase.slipUrl 
-            : `${BASE}/${purchase.slipUrl}`;
-          window.open(fullImageUrl, '_blank');
-        }}
-        className="p-2 rounded-lg bg-[rgba(79,70,229,0.15)] text-[#4F46E5] hover:bg-[rgba(79,70,229,0.25)] flex items-center gap-2"
-        title="View Bank Slip"
-      >
-        <FileText className="w-4 h-4" />
-        <span className="text-xs font-medium italic">Slip</span>
-      </button>
-    )}
-  </div>
-</td>
+                      {purchase.slipUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const fullImageUrl = purchase.slipUrl.startsWith('http') 
+                              ? purchase.slipUrl 
+                              : `${BASE}/${purchase.slipUrl}`;
+                            setSelectedSlip(fullImageUrl); // Popup එක විවෘත කරයි
+                          }}
+                          className="p-2 rounded-lg bg-[rgba(79,70,229,0.15)] text-[#4F46E5] hover:bg-[rgba(79,70,229,0.25)] flex items-center gap-2"
+                          title="View Bank Slip"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span className="text-xs font-medium italic">Slip</span>
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* --- Slip Preview Modal (Popup) --- */}
+      {selectedSlip && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="relative bg-[#1A1F2E] p-2 rounded-xl border border-white/10 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-2 mb-2">
+              <span className="text-sm font-medium text-[#A7ACB8]">Bank Slip Preview</span>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => window.open(selectedSlip, '_blank')}
+                  className="text-[#A7ACB8] hover:text-white transition-colors"
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => setSelectedSlip(null)}
+                  className="text-[#A7ACB8] hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            {/* Image display */}
+            <div className="overflow-auto max-h-[75vh] rounded-lg bg-black/40">
+              <img 
+                src={selectedSlip} 
+                alt="Bank Slip" 
+                className="w-full h-auto block"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Slip+Not+Found';
+                }}
+              />
+            </div>
+          </div>
+          {/* Backdrop එක click කළොත් වැසීමට */}
+          <div className="absolute inset-0 -z-10" onClick={() => setSelectedSlip(null)}></div>
+        </div>
+      )}
     </div>
   );
 }
