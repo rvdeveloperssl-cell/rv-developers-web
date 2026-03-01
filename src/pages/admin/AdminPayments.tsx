@@ -220,11 +220,15 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
                         </button>
                       </div>
                     )}
-                    {purchase.slipUrl && (
+                    {/* 2. View Slip Button - Slip URL එකක් තියෙනවා නම් පෙන්වන්න */}
+    {purchase.slipUrl && (
       <button
+        type="button"
         onClick={() => {
-          // Backend URL එකයි Database එකේ තියෙන path එකයි එකතු කරලා අලුත් tab එකක open කරනවා
-          window.open(`${BASE}/${purchase.slipUrl}`, '_blank');
+          const fullImageUrl = purchase.slipUrl.startsWith('http') 
+            ? purchase.slipUrl 
+            : `${BASE}/${purchase.slipUrl}`;
+          window.open(fullImageUrl, '_blank');
         }}
         className="p-2 rounded-lg bg-[rgba(79,70,229,0.15)] text-[#4F46E5] hover:bg-[rgba(79,70,229,0.25)] flex items-center gap-2"
         title="View Bank Slip"
