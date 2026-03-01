@@ -77,10 +77,11 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          price: formData.isFree ? 0 : formData.price,
-          features: JSON.stringify(formData.features.filter((f) => f.trim() !== ''))
-        }),
+  ...formData,
+  price: formData.isFree ? 0 : formData.price,
+  // features array එකක් විදිහටම යවන්න, backend එකෙන් ඒක stringify කරගනියි
+  features: formData.features.filter((f) => f.trim() !== '') 
+}),
       });
 
       if (response.ok) {
