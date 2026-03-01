@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // Backend එකේ URL එක
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// ImgBB API Key එක (ඔයා ලබාදුන්න එක)
+const IMGBB_API_KEY = '6f5870f190dd786efe70ef1f724d13e8';
 
 interface AdminPaymentsProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
@@ -233,10 +235,11 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
                         <button
                           type="button"
                           onClick={() => {
+                            // මෙතනදී URL එක http වලින් පටන් ගන්නේ නැත්නම් විතරක් BASE URL එක එකතු කරනවා
                             const fullImageUrl = purchase.slipUrl.startsWith('http') 
                               ? purchase.slipUrl 
                               : `${BASE}/${purchase.slipUrl}`;
-                            setSelectedSlip(fullImageUrl); // Popup එක විවෘත කරයි
+                            setSelectedSlip(fullImageUrl); 
                           }}
                           className="p-2 rounded-lg bg-[rgba(79,70,229,0.15)] text-[#4F46E5] hover:bg-[rgba(79,70,229,0.25)] flex items-center gap-2"
                           title="View Bank Slip"
@@ -282,11 +285,14 @@ export default function AdminPayments({ onNavigate: _onNavigate }: AdminPayments
               <img 
                 src={selectedSlip} 
                 alt="Bank Slip" 
-                className="w-full h-auto block"
+                className="w-full h-auto block mx-auto"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Slip+Not+Found';
                 }}
               />
+            </div>
+            <div className="text-center mt-2 py-1">
+               <p className="text-[10px] text-[#A7ACB8] uppercase tracking-widest font-mono">RV Developers Security System</p>
             </div>
           </div>
           {/* Backdrop එක click කළොත් වැසීමට */}
