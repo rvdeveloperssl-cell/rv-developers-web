@@ -29,28 +29,33 @@ class MockPaymentService {
     }
   }
 
-  // 2. Bank Transfer - Slip එක Upload කරන අතරතුර Database එකට දත්ත යවනවා
-  async submitBankTransfer(
-    userId: string,
-    softwareId: string,
-    slipFile: File
-  ): Promise<{ success: boolean; purchase?: Purchase; message: string }> {
-    // Image එකක් නිසා FormData පාවිච්චි කළ යුතුමයි
-    const formData = new FormData();
-    formData.append('userId', userId);
-    formData.append('softwareId', softwareId);
-    formData.append('slip', slipFile);
-
-    try {
-      const response = await fetch(this.cleanUrl('/api/payments/bank-transfer'), {
-        method: 'POST',
-        body: formData, // JSON නෙවෙයි, FormData යවන්නේ
-      });
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: 'Failed to upload bank slip to server' };
-    }
+  // 2. Bank Transfer - ImgBB URL එක Database එකට යවනවා
+async submitBankTransfer(
+  userId: string,
+  softwareId: string,
+  slipUrl: string // මෙතන දැන් File එක වෙනුවට ImgBB URL එක එනවා
+): Promise<{ success: boolean; purchase?: Purchase; message: string }> {
+  
+  try {
+    // දැන් FormData වෙනුවට කෙලින්ම JSON body එකක් විදියට යවන්න පුළුවන්
+    const response = await fetch(this.cleanUrl('/api/payments/bank-transfer'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', // JSON යවන බව සඳහන් කරන්න
+      },
+      body: JSON.stringify({
+        userId,
+        softwareId,
+        slipUrl, // ImgBB එකෙන් ලැබුණු direct link එක
+      }),
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Payment service error:', error);
+    return { success: false, message: 'Failed to submit payment details to server' };
   }
+}
 
   // 3. User හට අදාළ Purchases Database එකෙන් ලබා ගැනීම
   async getUserPurchases(userId: string): Promise<Purchase[]> {
