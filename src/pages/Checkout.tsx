@@ -90,35 +90,59 @@ export default function Checkout({ softwareId, onNavigate }: CheckoutProps) {
   };
 
   const handleBankTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !software || !slipFile) return;
+  e.preventDefault();
+  // මෙතන slipFile කියන්නේ ඔයා select කරපු image file එක
+  if (!user || !software || !slipFile) return;
 
-    setIsProcessing(true);
-    try {
-      const result = await paymentService.submitBankTransfer(user.id, software.id, slipFile);
-      if (result.success) {
-        toast({
-          title: 'Slip Submitted',
-          description: 'Your payment is pending verification. You will receive an email once approved.',
-        });
-        onNavigate('dashboard');
-      } else {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
+  setIsProcessing(true);
+
+  try {
+    // --- පියවර 1: ImgBB එකට Upload කරලා Direct URL එක ගැනීම ---
+    const apiKey = '6f5870f190dd786efe70ef1f724d13e8';
+    const formData = new FormData();
+    formData.append('image', slipFile);
+
+    const imgbbResponse = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const imgbbData = await imgbbResponse.json();
+
+    if (!imgbbData.success) {
+      throw new Error('ImgBB Upload Failed');
+    }
+
+    const directImageUrl = imgbbData.data.url; // ImgBB එකෙන් ලැබුණු URL එක
+
+    // --- පියවර 2: ලැබුණු URL එක Backend එකට යැවීම ---
+    // මෙතනදී අපි slipFile එක වෙනුවට directImageUrl එක යවනවා
+    const result = await paymentService.submitBankTransfer(user.id, software.id, directImageUrl);
+
+    if (result.success) {
+      toast({
+        title: 'Slip Submitted',
+        description: 'Your payment is pending verification. You will receive an email once approved.',
+      });
+      onNavigate('dashboard');
+    } else {
       toast({
         title: 'Error',
-        description: 'Failed to submit bank slip',
+        description: result.message,
         variant: 'destructive',
       });
-    } finally {
-      setIsProcessing(false);
     }
-  };
+  } catch (error) {
+    console.error("Payment Process Error:", error);
+    toast({
+      title: 'Error',
+      description: 'Failed to submit bank slip. Please try again.',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   if (isLoading) {
     return (
