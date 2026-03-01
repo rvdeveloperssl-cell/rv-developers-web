@@ -1,14 +1,22 @@
 import type { Software, Category } from '@/types';
 
 // .env එකේ තියෙන API URL එක ගන්නවා
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+// අගට / තිබුණොත් ඒක අයින් කරලා පිරිසිදු URL එකක් දෙන function එකක්
+const cleanUrl = (endpoint: string) => {
+  const baseUrl = BASE.endsWith('/') ? BASE.slice(0, -1) : BASE;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${baseUrl}${cleanEndpoint}`;
+};
 
 class SoftwareService {
-  // 1. සියලුම Software MySQL වලින් ලබා ගැනීම
   async getAllSoftware(): Promise<Software[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/software`);
-      if (!response.ok) throw new Error('Failed to fetch software');
+      // මෙන්න මෙතනදී cleanUrl පාවිච්චි කරනවා
+      const response = await fetch(cleanUrl('/api/software'));
+      
+      if (!response.ok) throw new Error('Failed to fetch from MySQL');
       const data = await response.json();
       
       // Backend එකෙන් එන දත්ත වල 'features' string එකක් නම් ඒක array එකක් කරනවා
