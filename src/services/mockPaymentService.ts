@@ -101,17 +101,24 @@ async submitBankTransfer(
 
   // Payment එක Verify කර Invoice සහ License Generate කිරීම (Backend එකේ සිදුවේ)
   async verifyPayment(purchaseId: string, adminId: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(this.cleanUrl('/api/admin/verify-payment'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ purchaseId, adminId }),
-      });
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: 'Verification process failed' };
-    }
+  try {
+    // 404 Error එක එන්නේ මෙතන URL එකේ අන්තිමට ${purchaseId} නැති නිසයි. 
+    // දැන් මම ඒක නිවැරදිව ඇතුළත් කළා.
+    const response = await fetch(this.cleanUrl(`/api/admin/verify-payment/${purchaseId}`), {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json' 
+      },
+      // දැන් purchaseId එක URL එකේ යන නිසා body එකේ යවන්න ඕනේ adminId විතරයි.
+      body: JSON.stringify({ adminId }), 
+    });
+
+    return await response.json();
+  } catch (error) {
+    console.error('Verification Error:', error);
+    return { success: false, message: 'Verification process failed' };
   }
+}
 
   // Payment එක Reject කිරීම
   async rejectPayment(purchaseId: string, adminId: string, reason: string): Promise<{ success: boolean; message: string }> {
