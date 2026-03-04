@@ -42,12 +42,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     }
     
     setIsLoading(true);
-    // ඔයාගේ Backend URL එක
-    const API_URL = "http://c4ckkocookws8kg4wc8ckow8.65.108.212.204.sslip.io";
+
+    // 1. URL එක Clean කරගැනීම (ENV එකේ අගට / තිබුණත් නැතත් වැඩ කරනවා)
+    const rawApiUrl = import.meta.env.VITE_API_URL || "";
+    const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
     try {
-      // MySQL Backend එකෙන් එකවර දත්ත වර්ග කිහිපයක් ලබා ගැනීම
-      // සටහන: ඔයාගේ Backend එකේ මේ Endpoints (API Paths) ටික තියෙන්න ඕනේ.
+      // MySQL Backend එකෙන් එකවර දත්ත ලබා ගැනීම
       const results = await Promise.allSettled([
         fetch(`${API_URL}/api/licenses/user/${user.id}`).then(res => res.json()),
         fetch(`${API_URL}/api/purchases/user/${user.id}`).then(res => res.json()),
@@ -55,27 +56,33 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         fetch(`${API_URL}/api/software/all`).then(res => res.json()),
       ]);
 
-      // 1. Licenses ලබා ගැනීම
-      const licensesRes = results[0].status === 'fulfilled' ? results[0].value : { success: false, data: [] };
-      setLicenses(Array.isArray(licensesRes.data) ? licensesRes.data : []);
+      // දත්ත ලබා ගැනීමේදී Array එකක්ද නැද්ද යන්න පරීක්ෂා කරන පොදු function එකක්
+      const getData = (res: any) => {
+        if (Array.isArray(res)) return res; // කෙලින්ම Array එකක් නම්
+        if (res && Array.isArray(res.data)) return res.data; // { data: [] } ලෙස එනවා නම්
+        return []; // දත්ත නැත්නම් හිස් Array එකක්
+      };
 
-      // 2. Purchases ලබා ගැනීම
-      const purchasesRes = results[1].status === 'fulfilled' ? results[1].value : { success: false, data: [] };
-      setPurchases(Array.isArray(purchasesRes.data) ? purchasesRes.data : []);
+      // 1. Licenses
+      const licData = results[0].status === 'fulfilled' ? results[0].value : [];
+      setLicenses(getData(licData));
 
-      // 3. Invoices ලබා ගැනීම
-      const invoicesRes = results[2].status === 'fulfilled' ? results[2].value : { success: false, data: [] };
-      setInvoices(Array.isArray(invoicesRes.data) ? invoicesRes.data : []);
+      // 2. Purchases
+      const purData = results[1].status === 'fulfilled' ? results[1].value : [];
+      setPurchases(getData(purData));
 
-      // 4. Software Map එක සකස් කිරීම (Software ID එකෙන් නම බලාගන්න මේක ඕනේ)
-      const softwareRes = results[3].status === 'fulfilled' ? results[3].value : { success: false, data: [] };
-      const softwareMapData: Record<string, Software> = {};
+      // 3. Invoices
+      const invData = results[2].status === 'fulfilled' ? results[2].value : [];
+      setInvoices(getData(invData));
+
+      // 4. Software Map එක සකස් කිරීම
+      const softData = results[3].status === 'fulfilled' ? results[3].value : [];
+      const softwares = getData(softData);
       
-      if (Array.isArray(softwareRes.data)) {
-        softwareRes.data.forEach((s: Software) => {
-          softwareMapData[s.id] = s;
-        });
-      }
+      const softwareMapData: Record<string, Software> = {};
+      softwares.forEach((s: Software) => {
+        softwareMapData[s.id] = s;
+      });
       setSoftwareMap(softwareMapData);
       
     } catch (error) {
@@ -83,7 +90,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+};
 
   const copyLicenseKey = (key: string) => {
     navigator.clipboard.writeText(key);
