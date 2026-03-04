@@ -1,22 +1,60 @@
-import { useState } from 'react';
-import { Search, Mail, Phone, Building, Calendar } from 'lucide-react';
-import { mockUsers } from '@/data/mockData';
+import { useEffect, useState } from 'react';
+import { Search, Mail, Phone, Building, Calendar, Loader2, UserCheck, UserMinus } from 'lucide-react';
 
-interface AdminClientsProps {
-  onNavigate: (page: string, params?: Record<string, string>) => void;
+interface Client {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  companyName?: string;
+  createdAt: string;
+  role: string;
 }
 
-export default function AdminClients({ onNavigate: _onNavigate }: AdminClientsProps) {
+export default function AdminClients() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const clients = mockUsers.filter((u) => u.role === 'client');
+  // ENV එකේ අගට / තිබ්බොත් ඒක අයින් කරලා clean URL එකක් ගන්නවා
+  const rawApiUrl = import.meta.env.VITE_API_URL || "";
+  const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
-  const filteredClients = clients.filter(
-    (c) =>
-      c.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.companyName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/admin/clients`);
+        const data = await response.json();
+        // Backend එකෙන් කෙලින්ම Array එකක් එන නිසා මේ විදිහට set කරනවා
+        setClients(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error loading clients:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchClients();
+  }, [API_URL]);
+
+  // Search filter එක (companyName එකත් එක්කම)
+  const filteredClients = clients.filter((c) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      c.fullName?.toLowerCase().includes(query) ||
+      c.email?.toLowerCase().includes(query) ||
+      c.companyName?.toLowerCase().includes(query)
+    );
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 text-[#4F46E5] animate-spin mb-2" />
+        <p className="text-[#A7ACB8]">Loading client database...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-16">
