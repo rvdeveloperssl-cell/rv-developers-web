@@ -1,7 +1,5 @@
-import { useState } from 'react';
-import { Download, FileText, TrendingUp, Users, CreditCard, Calendar } from 'lucide-react';
-import { paymentService } from '@/services/mockPaymentService';
-import { mockPurchases, mockSoftware } from '@/data/mockData';
+import { useState, useEffect } from 'react';
+import { Download, FileText, TrendingUp, Users, CreditCard, Calendar, Printer, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface AdminReportsProps {
@@ -12,17 +10,12 @@ export default function AdminReports({ onNavigate: _onNavigate }: AdminReportsPr
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [reportData, setReportData] = useState<any[]>([]);
   const { toast } = useToast();
 
-  const verifiedPurchases = mockPurchases.filter((p) => p.paymentStatus === 'verified');
-  const totalRevenue = verifiedPurchases.reduce((sum, p) => sum + p.amount, 0);
-
-  const salesBySoftware: Record<string, number> = {};
-  verifiedPurchases.forEach((p) => {
-    const software = mockSoftware.find((s) => s.id === p.softwareId);
-    const name = software?.name || 'Unknown';
-    salesBySoftware[name] = (salesBySoftware[name] || 0) + p.amount;
-  });
+  // API URL එක Clean කරගන්න
+  const rawApiUrl = import.meta.env.VITE_API_URL || "";
+  const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
   const handleGenerateReport = async () => {
     if (!startDate || !endDate) {
@@ -36,35 +29,39 @@ export default function AdminReports({ onNavigate: _onNavigate }: AdminReportsPr
 
     setIsGenerating(true);
     try {
-      const report = await paymentService.generateRevenueReport(startDate, endDate);
+      // Backend එකේ අපි හදපු /api/admin/purchases/all එකට කතා කරනවා
+      const res = await fetch(`${API_URL}/api/admin/purchases/all`);
+      const data = await res.json();
+      
+      // දින වකවානු අනුව Filter කිරීම
+      const filtered = data.filter((p: any) => {
+        const pDate = p.createdAt.split('T')[0];
+        return pDate >= startDate && pDate <= endDate && p.paymentStatus === 'verified';
+      });
+
+      setReportData(filtered);
+      
       toast({
         title: 'Report Generated',
-        description: `Total revenue: LKR ${report.totalRevenue.toLocaleString()}`,
+        description: `Found ${filtered.length} verified transactions.`,
       });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to generate report',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to fetch data', variant: 'destructive' });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleExportCSV = () => {
-    toast({
-      title: 'Export Started',
-      description: 'Your CSV report is being downloaded',
-    });
+  // PDF ලෙස Save කිරීමට Window Print පාවිච්චි කිරීම
+  const handleExportPDF = () => {
+    if (reportData.length === 0) {
+      toast({ title: 'Notice', description: 'Generate a report first' });
+      return;
+    }
+    window.print(); // මෙය ක්‍රියාත්මක වන විට CSS වල @media print කොටස වැඩ කරයි
   };
 
-  const handleExportPDF = () => {
-    toast({
-      title: 'Export Started',
-      description: 'Your PDF report is being generated',
-    });
-  };
+  const totalRevenue = reportData.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
   return (
     <div className="min-h-screen pt-24 pb-16">
