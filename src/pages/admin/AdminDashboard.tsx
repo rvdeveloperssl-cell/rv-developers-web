@@ -32,12 +32,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     pendingPayments: 0,
     activeLicenses: 0,
   });
-  
   const [recentActivity] = useState(mockActivityLogs.slice(0, 5));
   const [pendingPayments, setPendingPayments] = useState<Purchase[]>([]);
-  const [, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // URL එක Clean කරගන්නා ආකාරය
+  // API URL එක Clean කරගැනීම
   const rawApiUrl = import.meta.env.VITE_API_URL || "";
   const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
@@ -57,45 +56,43 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      // API Calls වලට කෙලින්ම Fetch පාවිච්චි කරමු (ප්‍රශ්නය කොතැනද කියා දැනගන්න ලේසියි)
-      const [softRes, licRes, purRes, pendRes] = await Promise.all([
-        fetch(`${API_URL}/api/software/all`).then(res => res.json()),
-        fetch(`${API_URL}/api/licenses/all`).then(res => res.json()), // Backend එකේ මේ route එක තිබිය යුතුයි
-        fetch(`${API_URL}/api/admin/purchases`).then(res => res.json()),
-        fetch(`${API_URL}/api/admin/pending-payments`).then(res => res.json()),
-      ]);
-
-      // දත්ත Array එකක් ලෙස ලබාගැනීමට helper එකක්
-      const ensureArray = (data: any) => {
-        if (Array.isArray(data)) return data;
-        if (data && Array.isArray(data.data)) return data.data;
-        return [];
+      // Backend එකේ ඔයා හදපු API වලට කෙලින්ම කතා කරනවා
+      const fetchSafe = async (path: string) => {
+        const res = await fetch(`${API_URL}${path}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
       };
 
-      const software = ensureArray(softRes);
-      const licenses = ensureArray(licRes);
-      const purchases = ensureArray(purRes);
-      const pending = ensureArray(pendRes);
+      const [software, purchases, pending, clients] = await Promise.all([
+        fetchSafe('/api/software/all'),
+        fetchSafe('/api/admin/purchases/all'),
+        fetchSafe('/api/admin/payments/pending'),
+        fetchSafe('/api/admin/clients'),
+      ]);
 
+      // Revenue සහ Active Licenses ගණනය කිරීම
       const verifiedPurchases = purchases.filter((p: any) => p.paymentStatus === 'verified');
       const totalRevenue = verifiedPurchases.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+      
+      // සටහන: ලයිසන්ස් සඳහා වෙනම API එකක් නැතිනම් purchases වලින් filter කරමු
+      const activeLicensesCount = verifiedPurchases.length; 
 
       setStats({
-        // මෙතනදී clients ලා ගණනත් Backend එකෙන් ගන්න පුළුවන් නම් වඩා හොඳයි
-        totalClients: mockUsers.filter((u) => u.role === 'client').length, 
+        totalClients: clients.length,
         totalSoftware: software.length,
-        totalLicenses: licenses.length,
+        totalLicenses: purchases.length,
         totalRevenue,
         pendingPayments: pending.length,
-        activeLicenses: licenses.filter((l: any) => l.status === 'active').length,
+        activeLicenses: activeLicensesCount,
       });
 
       setPendingPayments(pending.slice(0, 5));
     } catch (error) {
-      console.error("Admin Dashboard Load Error:", error);
+      console.error("Dashboard Load Error:", error);
       toast({
         title: 'Error',
-        description: 'Failed to load dashboard data. Check your API connection.',
+        description: 'Failed to load dashboard data. Please check backend connection.',
         variant: 'destructive',
       });
     } finally {
