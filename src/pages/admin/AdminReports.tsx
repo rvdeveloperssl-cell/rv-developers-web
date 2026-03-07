@@ -111,14 +111,45 @@ export default function AdminReports({ onNavigate: _onNavigate }: AdminReportsPr
       {/* Print කරන විට පමණක් පෙනෙන කොටස */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
+          @page { size: A4; margin: 10mm; }
           body * { visibility: hidden; }
           .print-section, .print-section * { visibility: visible; }
-          .print-section { position: absolute; left: 0; top: 0; width: 100%; }
-          .no-print { display: none; }
+          .print-section { 
+            position: absolute; left: 0; top: 0; width: 100%; 
+            color: #000 !important; background: white !important;
+          }
+          .no-print { display: none !important; }
+          .rv-panel { border: 1px solid #eee !important; background: white !important; box-shadow: none !important; }
+          .text-[#F4F6FF] { color: #000 !important; }
+          .text-[#A7ACB8] { color: #666 !important; }
+          .bg-\\[rgba\\(79\\,70\\,229\\,0\\.15\\)\\] { background: #f0f0f0 !important; }
+          .border-white\\/5 { border-color: #eee !important; }
         }
       `}} />
 
       <div className="rv-container print-section">
+        
+        {/* PDF EXCLUSIVE HEADER - Only visible during print */}
+        <div className="hidden print:block mb-8 border-b-2 border-black pb-6">
+          <div className="flex justify-between items-center">
+             <div>
+                <img 
+                  src="https://i.postimg.cc/4d76Jq41/RV-DEVELOPERS-LOGO.jpg" 
+                  alt="RV Logo" 
+                  className="w-24 h-24 object-contain mb-2"
+                />
+                <h1 className="text-2xl font-bold tracking-tight">RV DEVELOPERS LANKA</h1>
+                <p className="text-sm">Official Sales & Revenue Analytics Report</p>
+             </div>
+             <div className="text-right text-sm">
+                <p className="font-bold text-lg">REVENUE REPORT</p>
+                <p>Generated: {new Date().toLocaleDateString()} | {new Date().toLocaleTimeString()}</p>
+                <p>Report Period: {startDate || 'All Time'} - {endDate || 'Today'}</p>
+                <p className="mt-2 text-xs text-gray-500">System ID: RVD-GEN-{Math.floor(Math.random() * 10000)}</p>
+             </div>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 no-print">
           <div>
@@ -188,9 +219,39 @@ export default function AdminReports({ onNavigate: _onNavigate }: AdminReportsPr
           </div>
         </div>
 
+        {/* Full Transaction Table (Invisible on screen, Visible on PDF for complete logging) */}
+        <div className="hidden print:block mt-4 mb-8">
+           <h2 className="text-lg font-bold mb-4 border-b pb-2 text-black">Detailed Transaction Log</h2>
+           <table className="w-full text-sm border-collapse border border-gray-200">
+             <thead>
+               <tr className="bg-gray-100">
+                 <th className="border p-2 text-left">Date</th>
+                 <th className="border p-2 text-left">User ID / Name</th>
+                 <th className="border p-2 text-left">Software</th>
+                 <th className="border p-2 text-left">Payment</th>
+                 <th className="border p-2 text-right">Amount (LKR)</th>
+               </tr>
+             </thead>
+             <tbody>
+               {reportData.map((p, i) => (
+                 <tr key={i} className="border-b">
+                   <td className="border p-2">{new Date(p.createdAt).toLocaleDateString()}</td>
+                   <td className="border p-2">
+                      <div className="font-bold">{p.fullName}</div>
+                      <div className="text-[10px] text-gray-500">ID: {p.userId}</div>
+                   </td>
+                   <td className="border p-2">{p.softwareName}</td>
+                   <td className="border p-2 text-xs uppercase">{p.paymentMethod || 'Manual'}</td>
+                   <td className="border p-2 text-right font-bold">{p.amount.toLocaleString()}.00</td>
+                 </tr>
+               ))}
+             </tbody>
+           </table>
+        </div>
+
         {/* Sales by Software Table/List */}
         <div className="rv-panel p-6">
-          <h2 className="text-lg font-semibold text-[#F4F6FF] mb-6 border-b border-white/5 pb-2">Sales by Software</h2>
+          <h2 className="text-lg font-semibold text-[#F4F6FF] mb-6 border-b border-white/5 pb-2">Sales by Software (Summary)</h2>
           <div className="space-y-4">
             {Object.entries(salesBySoftware).length > 0 ? (
               Object.entries(salesBySoftware)
@@ -216,6 +277,13 @@ export default function AdminReports({ onNavigate: _onNavigate }: AdminReportsPr
             )}
           </div>
         </div>
+
+        {/* PDF Footer - Only Print */}
+        <div className="hidden print:block mt-12 pt-8 border-t border-gray-200 text-center text-[10px] text-gray-500">
+           <p>© {new Date().getFullYear()} RV DEVELOPERS LANKA - CONFIDENTIAL BUSINESS DOCUMENT</p>
+           <p>This report is automatically generated by the RV Management System. Any unauthorized reproduction is prohibited.</p>
+        </div>
+
       </div>
     </div>
   );
