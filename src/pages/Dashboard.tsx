@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Package,
   Key,
@@ -10,7 +10,8 @@ import {
   Copy,
   ExternalLink,
   ShieldCheck,
-  Zap
+  Zap,
+  X // අලුතින් එක්කළා
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { softwareService } from '@/services/mockSoftwareService';
@@ -32,6 +33,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [softwareMap, setSoftwareMap] = useState<Record<string, Software>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'licenses' | 'purchases' | 'invoices'>('overview');
+
+  // Invoice Modal සඳහා අලුතින් එක්කළ states
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -393,7 +398,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
               </div>
             </div>
-            <button className="p-3 rounded-xl bg-white/5 text-[#A7ACB8] hover:text-[#4F46E5] hover:bg-[#4F46E5]/10 transition-all">
+            {/* Modal එක Open කරන button එක මෙන්න මෙතන */}
+            <button 
+              onClick={() => { setSelectedInvoice(invoice); setIsInvoiceOpen(true); }}
+              className="p-3 rounded-xl bg-white/5 text-[#A7ACB8] hover:text-[#4F46E5] hover:bg-[#4F46E5]/10 transition-all"
+            >
               <Download className="w-5 h-5" />
             </button>
           </div>
@@ -413,6 +422,21 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-[#05060B]">
+      {/* Print සඳහා Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page { size: A4; margin: 0; }
+          body * { visibility: hidden; }
+          .print-section, .print-section * { visibility: visible; }
+          .print-section { 
+            position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+            padding: 20mm !important; background: white !important; 
+            z-index: 9999;
+          }
+          .no-print { display: none !important; }
+        }
+      `}} />
+
       <div className="rv-container">
         {/* Modern Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
@@ -466,6 +490,103 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           {activeTab === 'invoices' && renderInvoices()}
         </div>
       </div>
+
+      {/* --- INVOICE PREVIEW MODAL --- */}
+      {isInvoiceOpen && selectedInvoice && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
+          <div className="bg-[#1A1D24] border border-white/10 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl">
+            
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
+              <h3 className="text-[#F4F6FF] font-semibold">Invoice Preview</h3>
+              <div className="flex gap-2">
+                <button onClick={() => window.print()} className="rv-btn-primary py-1.5 px-3 text-sm flex items-center gap-2">
+                  <Download className="w-4 h-4" /> Download PDF
+                </button>
+                <button onClick={() => setIsInvoiceOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-[#A7ACB8]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 max-h-[80vh] overflow-y-auto bg-[#F4F6FF]">
+              <div className="print-section bg-white p-8 text-slate-800 shadow-sm rounded-lg mx-auto overflow-hidden">
+                <div className="flex justify-between items-start border-b-2 border-slate-100 pb-6 mb-6">
+                  <div>
+                    <img 
+                      src="https://i.postimg.cc/4d76Jq41/RV-DEVELOPERS-LOGO.jpg" 
+                      alt="RV Logo" 
+                      className="w-16 h-16 object-contain mb-3"
+                    />
+                    <h2 className="text-xl font-black text-[#4F46E5] tracking-tight uppercase">RV Developers</h2>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Premium Software Solutions</p>
+                  </div>
+                  <div className="text-right">
+                    <h1 className="text-3xl font-light text-slate-400 mb-1 tracking-widest">INVOICE</h1>
+                    <p className="text-sm font-bold text-slate-700">#{selectedInvoice.invoiceNumber}</p>
+                    <p className="text-xs text-slate-500 mt-1">{new Date(selectedInvoice.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8 mb-8">
+                  <div>
+                    <p className="text-[10px] uppercase text-slate-400 font-bold mb-2">Billed To:</p>
+                    <p className="font-bold text-slate-700">{user?.fullName}</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Email: {user?.email}<br />
+                      Status: <span className="text-green-600 font-bold uppercase">Paid</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase text-slate-400 font-bold mb-2">Payment Details:</p>
+                    <p className="text-xs text-slate-700 font-medium capitalize">{selectedInvoice.paymentMethod || 'Online'}</p>
+                    <p className="text-[10px] uppercase text-slate-400 font-bold mt-4 mb-1">Generated At:</p>
+                    <p className="text-[10px] text-slate-500">{new Date().toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <table className="w-full mb-8">
+                  <thead>
+                    <tr className="bg-slate-50 border-y border-slate-100">
+                      <th className="py-3 px-2 text-left text-[10px] uppercase text-slate-400 font-bold">Description</th>
+                      <th className="py-3 px-2 text-center text-[10px] uppercase text-slate-400 font-bold">Qty</th>
+                      <th className="py-3 px-2 text-right text-[10px] uppercase text-slate-400 font-bold">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    <tr>
+                      <td className="py-4 px-2">
+                        <p className="font-bold text-slate-700">{softwareMap[selectedInvoice.softwareId]?.name || 'Software Product'}</p>
+                        <p className="text-[10px] text-slate-400">Full Access License Key</p>
+                      </td>
+                      <td className="py-4 px-2 text-center text-sm text-slate-600">01</td>
+                      <td className="py-4 px-2 text-right font-bold text-slate-700">LKR {selectedInvoice.amount.toLocaleString()}.00</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="flex justify-end mb-12">
+                  <div className="w-full max-w-[200px] space-y-2">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Subtotal:</span>
+                      <span>LKR {selectedInvoice.amount.toLocaleString()}.00</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-200 pt-2 font-bold text-slate-800">
+                      <span>Total:</span>
+                      <span className="text-[#4F46E5]">LKR {selectedInvoice.amount.toLocaleString()}.00</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 pt-6 text-center">
+                  <p className="text-[10px] text-slate-400 italic">
+                    Thank you for choosing RV Developers. This is an official digital receipt.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
