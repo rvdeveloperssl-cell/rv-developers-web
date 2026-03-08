@@ -11,11 +11,13 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
-  X
+  X,
+  Star
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { softwareService } from '@/services/mockSoftwareService';
 import type { Software, License, Purchase, Invoice } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
@@ -31,6 +33,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'licenses' | 'purchases' | 'invoices'>('overview');
 
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+
   useEffect(() => {
     loadDashboardData();
   }, [user]);
@@ -42,43 +47,57 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     }
     
     setIsLoading(true);
-    const rawApiUrl = import.meta.env.VITE_API_URL || "";
+    const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
     const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
     try {
-      const results = await Promise.allSettled([
+      // මෙහිදී ඔබගේ Database table columns වලට අනුව දත්ත ලබාගැනීම සිදු කරයි
+      const [licRes, purRes, invRes, softRes] = await Promise.allSettled([
         fetch(`${API_URL}/api/licenses/user/${user.id}`).then(res => res.json()),
         fetch(`${API_URL}/api/purchases/user/${user.id}`).then(res => res.json()),
         fetch(`${API_URL}/api/invoices/user/${user.id}`).then(res => res.json()),
-        fetch(`${API_URL}/api/software/all`).then(res => res.json()),
+        fetch(`${API_URL}/api/software`).then(res => res.json()),
       ]);
 
-      const getData = (res: any) => {
+      const processData = (res: any) => {
         if (Array.isArray(res)) return res;
         if (res && Array.isArray(res.data)) return res.data;
         return [];
       };
 
-      setLicenses(getData(results[0].status === 'fulfilled' ? results[0].value : []));
-      setPurchases(getData(results[1].status === 'fulfilled' ? results[1].value : []));
-      setInvoices(getData(results[2].status === 'fulfilled' ? results[2].value : []));
+      // Licenses data setting
+      const lData = licRes.status === 'fulfilled' ? processData(licRes.value) : [];
+      setLicenses(lData);
 
-      const softwares = getData(results[3].status === 'fulfilled' ? results[3].value : []);
-      const softwareMapData: Record<string, Software> = {};
-      softwares.forEach((s: Software) => {
-        softwareMapData[s.id] = s;
+      // Purchases data setting
+      const pData = purRes.status === 'fulfilled' ? processData(purRes.value) : [];
+      setPurchases(pData);
+
+      // Invoices data setting
+      const iData = invRes.status === 'fulfilled' ? processData(invRes.value) : [];
+      setInvoices(iData);
+
+      // Software Map එක සකස් කිරීම (IDs හරහා image/name ලබා ගැනීමට)
+      const sData = softRes.status === 'fulfilled' ? processData(softRes.value) : [];
+      const sMap: Record<string, Software> = {};
+      sData.forEach((s: any) => {
+        const idStr = s.id.toString();
+        sMap[idStr] = {
+          ...s,
+          id: idStr,
+          features: typeof s.features === 'string' ? JSON.parse(s.features) : s.features,
+        };
       });
-      setSoftwareMap(softwareMapData);
+      setSoftwareMap(sMap);
       
     } catch (error) {
-      console.error("Dashboard Load Error:", error);
+      console.error("Dashboard Sync Error:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const copyLicenseKey = (key: string) => {
-    if (!key) return;
     navigator.clipboard.writeText(key);
     toast({
       title: 'Copied!',
@@ -86,8 +105,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     });
   };
 
-  // Stats calculation with proper database status checking
-  const stats = useMemo(() => [
+  const stats = [
     {
       icon: Package,
       label: 'Purchased Software',
@@ -104,10 +122,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       icon: CreditCard,
       label: 'Total Spent',
       value: `LKR ${(purchases || [])
-        .filter((p) => {
-          const s = p.paymentStatus?.toLowerCase();
-          return s === 'verified' || s === 'paid' || s === 'success';
-        })
+        .filter((p) => p.paymentStatus === 'verified')
         .reduce((sum, p) => sum + Number(p.amount || 0), 0)
         .toLocaleString('en-LK', { minimumFractionDigits: 2 })}`,
       color: 'bg-purple-500/10 text-purple-400',
@@ -118,11 +133,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       value: invoices?.length || 0,
       color: 'bg-slate-500/10 text-slate-400',
     },
-  ], [purchases, licenses, invoices]);
+  ];
 
   const renderOverview = () => (
     <div className="space-y-10">
-      {/* Stats Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <div key={stat.label} className="rv-panel p-6 border border-white/5 hover:border-white/10 transition-all">
@@ -135,22 +149,21 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         ))}
       </div>
 
-      {/* Inventory Preview */}
       <div>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-1 h-6 bg-[#4F46E5] rounded-full"></div>
             <h3 className="text-xl font-bold text-[#F4F6FF]">My Software Inventory</h3>
           </div>
-          <button onClick={() => setActiveTab('licenses')} className="text-sm font-medium text-[#4F46E5] flex items-center gap-1 hover:underline">
+          <button onClick={() => setActiveTab('licenses')} className="text-sm font-medium text-[#4F46E5] flex items-center gap-1">
             Manage All <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
         {licenses.length === 0 ? (
           <div className="rv-panel p-12 text-center border-dashed border-white/10">
-            <Zap className="w-10 h-10 text-white/10 mx-auto mb-4" />
-            <h4 className="text-[#F4F6FF] font-medium">No active software found</h4>
+            <Zap className="w-10 h-10 text-white/20 mx-auto mb-4" />
+            <h4 className="text-[#F4F6FF] font-semibold">No active software found</h4>
             <button onClick={() => onNavigate('software')} className="rv-btn-primary mt-4">Browse Software</button>
           </div>
         ) : (
@@ -159,35 +172,30 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               const software = softwareMap[license.softwareId];
               return (
                 <div key={license.id} className="rv-panel group overflow-hidden p-0 border border-white/5 hover:border-[#4F46E5]/30 transition-all">
-                   <div className="relative aspect-video overflow-hidden">
-                      <img src={software?.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] to-transparent" />
-                      <div className="absolute bottom-3 left-3">
-                        <span className="rv-badge bg-[#4F46E5] text-[10px]">{software?.category || 'Software'}</span>
-                      </div>
-                   </div>
-                   <div className="p-5">
-                    <h3 className="text-lg font-bold text-[#F4F6FF] mb-4 line-clamp-1">{software?.name || 'Loading Asset...'}</h3>
-                    <div className="bg-black/40 rounded-lg p-3 border border-white/5 mb-4">
-                      <div className="text-[10px] text-[#A7ACB8] uppercase tracking-widest mb-1">License Key</div>
-                      <div className="flex items-center justify-between">
-                        <code className="text-[#4F46E5] font-mono text-sm">{license.licenseKey}</code>
-                        <button onClick={() => copyLicenseKey(license.licenseKey)} className="text-[#A7ACB8] hover:text-white">
-                          <Copy className="w-4 h-4" />
-                        </button>
+                  <div className="relative aspect-[16/9]">
+                    <img src={software?.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] to-transparent" />
+                    <div className="absolute bottom-3 left-4 flex items-center gap-2">
+                      <span className="rv-badge bg-[#4F46E5] text-[10px]">{software?.category || 'PRO'}</span>
+                      <div className="flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm border border-white/10">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="text-[10px] text-emerald-400 capitalize">{license.status}</span>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => software?.downloadUrl && window.open(software.downloadUrl, '_blank')}
-                        className="flex-1 rv-btn-primary py-2.5 text-xs flex items-center justify-center gap-2"
-                      >
+                  </div>
+                  <div className="p-5">
+                    <h3 className="text-lg font-bold text-[#F4F6FF] line-clamp-1">{software?.name || 'Loading...'}</h3>
+                    <div className="mt-4 bg-black/40 rounded-lg p-3 border border-white/5 flex items-center justify-between">
+                      <code className="text-[#4F46E5] font-mono text-sm">{license.licenseKey}</code>
+                      <button onClick={() => copyLicenseKey(license.licenseKey)} className="text-[#A7ACB8] hover:text-white">
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button className="flex-1 rv-btn-primary py-2 text-xs flex items-center justify-center gap-2">
                         <Download className="w-4 h-4" /> Download
                       </button>
-                      <button 
-                         onClick={() => onNavigate('software-detail', { id: software?.id })}
-                         className="p-2.5 rounded-lg bg-white/5 border border-white/10 text-[#A7ACB8] hover:text-white"
-                      >
+                      <button onClick={() => onNavigate('software-detail', { id: software?.id })} className="p-2 rounded-lg bg-white/5 text-[#A7ACB8] border border-white/10">
                         <ExternalLink className="w-4 h-4" />
                       </button>
                     </div>
@@ -198,67 +206,36 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
         )}
       </div>
-
-      {/* Recent Activity Table */}
-      <div className="rv-panel p-6 border border-white/5">
-        <h3 className="text-lg font-bold text-[#F4F6FF] mb-6">Recent Transactions</h3>
-        <div className="space-y-3">
-          {purchases.slice(0, 3).map((purchase) => {
-            const software = softwareMap[purchase.softwareId];
-            const isVerified = ['verified', 'paid', 'success'].includes(purchase.paymentStatus?.toLowerCase());
-            return (
-              <div key={purchase.id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 bg-white/5">
-                    <img src={software?.imageUrl} className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <div className="text-[#F4F6FF] font-semibold text-sm">{software?.name || 'Purchase'}</div>
-                    <div className="text-[11px] text-[#A7ACB8]">{new Date(purchase.createdAt).toDateString()}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[#F4F6FF] font-bold text-sm">LKR {Number(purchase.amount).toLocaleString('en-LK')}</div>
-                  <div className={`text-[10px] font-bold uppercase ${isVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {purchase.paymentStatus}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 
   const renderLicenses = () => (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-2">
         <Key className="w-6 h-6 text-[#4F46E5]" />
         <h3 className="text-2xl font-bold text-[#F4F6FF]">Managed Licenses</h3>
       </div>
       <div className="grid md:grid-cols-2 gap-6">
         {licenses.map((license) => {
           const software = softwareMap[license.softwareId];
-          const isLifetime = !license.expiresAt || license.expiresAt === null || license.expiresAt === "";
-          const isActive = license.status?.toString().toLowerCase() === 'active';
+          const isLifetime = !license.expiresAt || license.expiresAt === "" || license.expiresAt === "0000-00-00";
 
           return (
             <div key={license.id} className="rv-panel p-6 border border-white/5 hover:border-[#4F46E5]/20 transition-all">
               <div className="flex justify-between items-start mb-6">
                 <div className="flex gap-4">
                   <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 bg-white/5">
-                    <img src={software?.imageUrl} className="w-full h-full object-cover" alt="" />
+                    <img src={software?.imageUrl} className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name || 'Software Product'}</h4>
+                    <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name || 'RV PRO POS'}</h4>
                     <p className="text-xs text-[#A7ACB8]">Version {software?.version || '1.0.0'}</p>
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                  isActive 
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                  : 'bg-red-500/10 text-red-400 border-red-500/20'
+                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                  license.status?.toString().toLowerCase() === 'active' 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
                 }`}>
                   {license.status}
                 </span>
@@ -270,29 +247,25 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <ShieldCheck className="w-3.5 h-3.5 text-[#4F46E5]" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <code className="text-lg text-[#F4F6FF] font-mono tracking-wider break-all">
-                    {license.licenseKey}
-                  </code>
-                  <button onClick={() => copyLicenseKey(license.licenseKey)} className="p-2 text-[#A7ACB8] hover:text-white transition-colors">
+                  <code className="text-lg text-[#F4F6FF] font-mono tracking-wider break-all mr-2">{license.licenseKey}</code>
+                  <button onClick={() => copyLicenseKey(license.licenseKey)} className="p-2.5 rounded-lg bg-white/5 text-[#A7ACB8] hover:bg-[#4F46E5] transition-all">
                     <Copy className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-white/[0.02] p-3 rounded-lg text-center border border-white/5">
+                <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
                   <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Activations</div>
-                  <div className="text-[#F4F6FF] text-sm font-bold">
-                    {license.currentActivations || 0} / {license.maxActivations || 1}
-                  </div>
+                  <div className="text-[#F4F6FF] text-sm font-bold">{license.currentActivations || 0} / {license.maxActivations || 1}</div>
                 </div>
-                <div className="bg-white/[0.02] p-3 rounded-lg text-center border border-white/5">
+                <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
                   <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Issued</div>
                   <div className="text-[#F4F6FF] text-sm font-bold">
                     {license.createdAt ? new Date(license.createdAt).toLocaleDateString('en-GB') : 'N/A'}
                   </div>
                 </div>
-                <div className="bg-white/[0.02] p-3 rounded-lg text-center border border-white/5">
+                <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
                   <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Expiry</div>
                   <div className={`text-sm font-bold ${isLifetime ? 'text-amber-400' : 'text-[#F4F6FF]'}`}>
                     {isLifetime ? 'Lifetime' : new Date(license.expiresAt!).toLocaleDateString('en-GB')}
