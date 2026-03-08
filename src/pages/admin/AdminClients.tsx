@@ -41,8 +41,9 @@ export default function AdminClients() {
 
   // Client කෙනෙක්ව Verify හෝ Unverify කරන Function එක
   const handleToggleVerify = async (id: string, currentStatus: any) => {
-    // දැනට තියෙන status එකේ අනිත් පැත්ත (toggle) යවනවා
-    const newStatus = !currentStatus; 
+    // 0 හෝ 1 ලෙස එන එක boolean කරගන්න
+    const numericStatus = (currentStatus == 1 || currentStatus === true) ? 1 : 0;
+    const newStatus = numericStatus === 1 ? false : true; // Toggle කරනවා
     
     try {
       const response = await fetch(`${API_URL}/api/admin/clients/${id}/verify`, {
@@ -54,19 +55,25 @@ export default function AdminClients() {
       const result = await response.json();
 
       if (result.success) {
+        // 1. UI එකේ දත්ත වහාම අලුත් කරන්න (State update)
+        setClients(prevClients => 
+          prevClients.map(client => 
+            client.id === id ? { ...client, isVerified: newStatus ? 1 : 0 } : client
+          )
+        );
+
         toast({
           title: "Success",
-          description: `Client ${newStatus ? 'verified' : 'unverified'} successfully`,
+          description: `Client status updated to ${newStatus ? 'Verified' : 'Pending'}`,
         });
-        // Table එකේ දත්ත refresh කරනවා
-        fetchClients();
       } else {
-        throw new Error(result.message);
+        alert("Update failed: " + result.message);
       }
     } catch (err) {
+      console.error("Fetch Error:", err);
       toast({
         title: "Error",
-        description: "Failed to update client status",
+        description: "Connection error. Please try again.",
         variant: "destructive",
       });
     }
