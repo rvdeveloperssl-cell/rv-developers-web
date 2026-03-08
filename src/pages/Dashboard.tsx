@@ -112,14 +112,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       color: 'bg-emerald-500/10 text-emerald-400',
     },
     {
-      icon: CreditCard,
-      label: 'Total Spent',
-      value: `LKR ${(purchases || [])
-        .filter((p) => p.paymentStatus === 'verified')
-        .reduce((sum, p) => sum + (p.amount || 0), 0)
-        .toLocaleString('en-LK', { minimumFractionDigits: 2 })}`,
-      color: 'bg-purple-500/10 text-purple-400',
-    },
+  icon: CreditCard,
+  label: 'Total Spent',
+  value: `LKR ${(purchases || [])
+    .filter((p) => p.paymentStatus === 'verified')
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0) // මෙතන Number() එක පාවිච්චි කරන්න
+    .toLocaleString('en-LK', { 
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2 
+    })}`,
+  color: 'bg-purple-500/10 text-purple-400',
+},
     {
       icon: FileText,
       label: 'Invoices',
