@@ -11,7 +11,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
-  X // අලුතින් එක්කළා
+  X 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { softwareService } from '@/services/mockSoftwareService';
@@ -34,7 +34,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'licenses' | 'purchases' | 'invoices'>('overview');
 
-  // Invoice Modal සඳහා අලුතින් එක්කළ states
+  // Invoice Modal states
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
@@ -131,7 +131,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   const renderOverview = () => (
     <div className="space-y-10">
-      {/* Stats Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <div key={stat.label} className="rv-panel p-6 border border-white/5 hover:border-white/10 transition-all">
@@ -144,7 +143,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         ))}
       </div>
 
-      {/* Modern Active Software Grid */}
       <div>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -236,7 +234,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         )}
       </div>
 
-      {/* Mini Purchase History */}
       <div className="rv-panel p-6 border border-white/5">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-[#F4F6FF]">Recent Transactions</h3>
@@ -398,7 +395,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
               </div>
             </div>
-            {/* Modal එක Open කරන button එක මෙන්න මෙතන */}
             <button 
               onClick={() => { setSelectedInvoice(invoice); setIsInvoiceOpen(true); }}
               className="p-3 rounded-xl bg-white/5 text-[#A7ACB8] hover:text-[#4F46E5] hover:bg-[#4F46E5]/10 transition-all"
@@ -422,7 +418,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-[#05060B]">
-      {/* Print සඳහා Styles */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: A4; margin: 0; }
@@ -438,7 +433,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       `}} />
 
       <div className="rv-container">
-        {/* Modern Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -459,7 +453,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </button>
         </div>
 
-        {/* Custom Tab System */}
         <div className="flex flex-wrap gap-2 mb-10 p-1.5 bg-white/[0.02] border border-white/5 rounded-2xl w-fit">
           {[
             { id: 'overview', label: 'Overview', icon: Activity },
@@ -482,7 +475,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           ))}
         </div>
 
-        {/* Tab Content with Animation */}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           {activeTab === 'overview' && renderOverview()}
           {activeTab === 'licenses' && renderLicenses()}
