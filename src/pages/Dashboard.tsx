@@ -85,19 +85,43 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     toast({ title: 'Copied!', description: 'License key copied to clipboard' });
   };
 
-  const stats = [
-    { icon: Package, label: 'Purchased Software', value: purchases?.length || 0, color: 'bg-[#4F46E5]/10 text-[#4F46E5]' },
-    { icon: Key, label: 'Active Licenses', value: licenses?.filter((l) => l.status === 'active').length || 0, color: 'bg-emerald-500/10 text-emerald-400' },
-    { 
-      icon: CreditCard, 
-      label: 'Total Spent', 
-      value: `LKR ${(purchases || []).filter(p => p.paymentStatus === 'verified').reduce((sum, p) => sum + (p.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 
-      color: 'bg-purple-500/10 text-purple-400' 
-    },
-    { icon: FileText, label: 'Invoices', value: invoices?.length || 0, color: 'bg-slate-500/10 text-slate-400' },
-  ];
+  // මුදල් ප්‍රමාණය Format කරන function එක
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-LK', {
+      style: 'currency',
+      currency: 'LKR',
+      minimumFractionDigits: 2,
+    }).format(amount).replace("LKR", "LKR ");
+  };
 
-  // --- RENDERING FUNCTIONS ---
+  const stats = [
+    {
+      icon: Package,
+      label: 'Purchased Software',
+      value: purchases?.length || 0,
+      color: 'bg-[#4F46E5]/10 text-[#4F46E5]',
+    },
+    {
+      icon: Key,
+      label: 'Active Licenses',
+      value: licenses?.filter((l) => l.status === 'active').length || 0,
+      color: 'bg-emerald-500/10 text-emerald-400',
+    },
+    {
+      icon: CreditCard,
+      label: 'Total Spent',
+      value: formatCurrency((purchases || [])
+        .filter((p) => p.paymentStatus === 'verified')
+        .reduce((sum, p) => sum + (p.amount || 0), 0)),
+      color: 'bg-purple-500/10 text-purple-400',
+    },
+    {
+      icon: FileText,
+      label: 'Invoices',
+      value: invoices?.length || 0,
+      color: 'bg-slate-500/10 text-slate-400',
+    },
+  ];
 
   const renderOverview = () => (
     <div className="space-y-10">
@@ -119,14 +143,16 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div className="w-1 h-6 bg-[#4F46E5] rounded-full"></div>
             <h3 className="text-xl font-bold text-[#F4F6FF]">My Software Inventory</h3>
           </div>
-          <button onClick={() => setActiveTab('licenses')} className="text-sm font-medium text-[#4F46E5] flex items-center gap-1">
+          <button onClick={() => setActiveTab('licenses')} className="text-sm font-medium text-[#4F46E5] hover:text-[#3f38c2] flex items-center gap-1">
             Manage All <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
         {licenses.length === 0 ? (
           <div className="rv-panel p-12 text-center border-dashed border-white/10">
-            <Zap className="w-10 h-10 text-white/20 mx-auto mb-4" />
+            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Zap className="w-10 h-10 text-white/20" />
+            </div>
             <h4 className="text-[#F4F6FF] font-semibold text-lg">No active software found</h4>
             <button onClick={() => onNavigate('software')} className="rv-btn-primary mt-6">Browse Software</button>
           </div>
@@ -137,25 +163,34 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               return (
                 <div key={license.id} className="rv-panel group overflow-hidden p-0 border border-white/5 hover:border-[#4F46E5]/30 transition-all duration-300">
                   <div className="relative aspect-[16/9]">
-                    <img src={software?.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] via-[#0B0E16]/20" />
-                    <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                      <span className="rv-badge bg-[#4F46E5] text-white text-[10px] font-bold uppercase">{software?.category}</span>
+                    <img src={software?.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={software?.name} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] via-[#0B0E16]/20 to-transparent" />
+                    <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                      <span className="rv-badge bg-[#4F46E5] text-white text-[10px] uppercase font-bold">{software?.category || 'Software'}</span>
+                      <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs text-emerald-400 font-medium capitalize">{license.status}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="p-5">
-                    <h3 className="text-lg font-bold text-[#F4F6FF]">{software?.name}</h3>
-                    <div className="mt-4 bg-black/40 rounded-lg p-3 border border-white/5 flex items-center justify-between">
-                      <code className="text-[#4F46E5] font-mono text-sm">{license.licenseKey}</code>
-                      <button onClick={() => copyLicenseKey(license.licenseKey)} className="text-[#A7ACB8] hover:text-white"><Copy className="w-4 h-4" /></button>
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      {software?.downloadUrl && (
-                        <button className="flex-1 rv-btn-primary py-2 text-xs flex items-center justify-center gap-2">
-                          <Download className="w-4 h-4" /> Download
-                        </button>
-                      )}
-                      <button onClick={() => onNavigate('software-detail', { id: software?.id })} className="p-2.5 rounded-lg bg-white/5 text-[#A7ACB8] border border-white/10"><ExternalLink className="w-4 h-4" /></button>
+                    <h3 className="text-lg font-bold text-[#F4F6FF] line-clamp-1">{software?.name || 'Loading...'}</h3>
+                    <div className="mt-4 space-y-3">
+                      <div className="bg-black/40 rounded-lg p-3 border border-white/5">
+                        <div className="text-[10px] text-[#A7ACB8] uppercase mb-1 font-bold">License Key</div>
+                        <div className="flex items-center justify-between">
+                          <code className="text-[#4F46E5] font-mono text-sm">{license.licenseKey}</code>
+                          <button onClick={() => copyLicenseKey(license.licenseKey)} className="text-[#A7ACB8] hover:text-white"><Copy className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {software?.downloadUrl && (
+                          <button className="flex-1 rv-btn-primary py-2.5 text-xs flex items-center justify-center gap-2">
+                            <Download className="w-4 h-4" /> Download
+                          </button>
+                        )}
+                        <button onClick={() => onNavigate('software-detail', { id: software?.id })} className="px-3 py-2.5 rounded-lg bg-white/5 text-[#A7ACB8] border border-white/10"><ExternalLink className="w-4 h-4" /></button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -180,31 +215,41 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div key={license.id} className="rv-panel p-6 border border-white/5">
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex gap-4">
-                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10"><img src={software?.imageUrl} className="w-full h-full object-cover" /></div>
+                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10">
+                       <img src={software?.imageUrl} className="w-full h-full object-cover" />
+                    </div>
                     <div>
                       <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name}</h4>
                       <p className="text-xs text-[#A7ACB8]">Version {software?.version || '1.0.0'}</p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${license.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>{license.status}</span>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${license.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                    {license.status}
+                  </span>
                 </div>
-                <div className="bg-[#05060B] rounded-xl p-4 border border-white/5 mb-6 flex items-center justify-between">
-                  <code className="text-lg text-[#F4F6FF] font-mono">{license.licenseKey}</code>
-                  <button onClick={() => copyLicenseKey(license.licenseKey)} className="rv-btn-secondary p-2"><Copy className="w-4 h-4" /></button>
+                <div className="bg-[#05060B] rounded-xl p-4 border border-white/5 mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-[#A7ACB8] font-bold uppercase">Master License Key</span>
+                    <ShieldCheck className="w-3 h-3 text-[#4F46E5]" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <code className="text-lg text-[#F4F6FF] font-mono tracking-wider">{license.licenseKey}</code>
+                    <button onClick={() => copyLicenseKey(license.licenseKey)} className="rv-btn-secondary p-2 rounded-lg"><Copy className="w-4 h-4" /></button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                   <div className="bg-white/[0.02] p-2 rounded-lg text-center font-bold">
-                      <div className="text-[9px] text-[#A7ACB8] uppercase">Activations</div>
-                      <div className="text-[#F4F6FF] text-sm">{license.currentActivations}/{license.maxActivations}</div>
-                   </div>
-                   <div className="bg-white/[0.02] p-2 rounded-lg text-center font-bold">
-                      <div className="text-[9px] text-[#A7ACB8] uppercase">Issued</div>
-                      <div className="text-[#F4F6FF] text-sm">{new Date(license.createdAt).toLocaleDateString()}</div>
-                   </div>
-                   <div className="bg-white/[0.02] p-2 rounded-lg text-center font-bold">
-                      <div className="text-[9px] text-[#A7ACB8] uppercase">Expiry</div>
-                      <div className="text-[#F4F6FF] text-sm">{license.expiresAt ? new Date(license.expiresAt).toLocaleDateString() : 'Lifetime'}</div>
-                   </div>
+                  <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                    <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Activations</div>
+                    <div className="text-[#F4F6FF] text-sm font-bold">{license.currentActivations}/{license.maxActivations}</div>
+                  </div>
+                  <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                    <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Issued</div>
+                    <div className="text-[#F4F6FF] text-sm font-bold">{new Date(license.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                    <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Expiry</div>
+                    <div className="text-[#F4F6FF] text-sm font-bold">{license.expiresAt ? new Date(license.expiresAt).toLocaleDateString() : 'Lifetime'}</div>
+                  </div>
                 </div>
               </div>
             );
@@ -220,25 +265,37 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/5">
-              <th className="text-left py-4 px-4 text-xs font-bold text-[#A7ACB8] uppercase">Software</th>
+              <th className="text-left py-4 px-4 text-xs font-bold text-[#A7ACB8] uppercase">Software Asset</th>
               <th className="text-left py-4 px-4 text-xs font-bold text-[#A7ACB8] uppercase">Date</th>
               <th className="text-left py-4 px-4 text-xs font-bold text-[#A7ACB8] uppercase">Amount</th>
               <th className="text-left py-4 px-4 text-xs font-bold text-[#A7ACB8] uppercase">Status</th>
+              <th className="text-right py-4 px-4 text-xs font-bold text-[#A7ACB8] uppercase">Gateway</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.02]">
             {purchases.map((purchase) => {
               const software = softwareMap[purchase.softwareId];
               return (
-                <tr key={purchase.id} className="hover:bg-white/[0.02]">
-                  <td className="py-5 px-4 flex items-center gap-3">
-                    <img src={software?.imageUrl} className="w-8 h-8 rounded object-cover" />
-                    <span className="text-[#F4F6FF] font-medium">{software?.name}</span>
-                  </td>
-                  <td className="py-5 px-4 text-[#A7ACB8] text-sm">{new Date(purchase.createdAt).toLocaleDateString()}</td>
-                  <td className="py-5 px-4 text-[#F4F6FF] font-bold text-sm">LKR {purchase.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <tr key={purchase.id} className="hover:bg-white/[0.02] transition-colors group">
                   <td className="py-5 px-4">
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${purchase.paymentStatus === 'verified' ? 'text-emerald-400' : 'text-amber-400'}`}>{purchase.paymentStatus}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10">
+                        <img src={software?.imageUrl} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[#F4F6FF] font-medium">{software?.name || 'Legacy Asset'}</span>
+                    </div>
+                  </td>
+                  <td className="py-5 px-4 text-[#A7ACB8] text-sm">
+                    {new Date(purchase.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="py-5 px-4 text-[#F4F6FF] font-bold">{formatCurrency(purchase.amount)}</td>
+                  <td className="py-5 px-4">
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${purchase.paymentStatus === 'verified' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                      {purchase.paymentStatus}
+                    </span>
+                  </td>
+                  <td className="py-5 px-4 text-[#A7ACB8] text-right text-xs capitalize">
+                    {purchase.paymentMethod.replace('_', ' ')}
                   </td>
                 </tr>
               );
@@ -254,15 +311,24 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {invoices.map((invoice) => {
         const software = softwareMap[invoice.softwareId];
         return (
-          <div key={invoice.id} className="rv-panel p-5 flex items-center justify-between border border-white/5">
+          <div key={invoice.id} className="rv-panel p-5 flex items-center justify-between border border-white/5 hover:border-white/20 transition-all">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#4F46E5]/10 flex items-center justify-center"><FileText className="w-6 h-6 text-[#4F46E5]" /></div>
+              <div className="w-12 h-12 rounded-xl bg-[#4F46E5]/10 flex items-center justify-center border border-[#4F46E5]/20">
+                <FileText className="w-6 h-6 text-[#4F46E5]" />
+              </div>
               <div>
                 <div className="text-[#F4F6FF] font-bold">{invoice.invoiceNumber}</div>
-                <div className="text-[11px] text-[#A7ACB8] font-bold uppercase">{software?.name} • {new Date(invoice.createdAt).toLocaleDateString()}</div>
+                <div className="text-[11px] text-[#A7ACB8] font-medium uppercase">
+                  {software?.name} • {new Date(invoice.createdAt).toLocaleDateString()}
+                </div>
               </div>
             </div>
-            <button onClick={() => { setSelectedInvoice(invoice); setIsInvoiceOpen(true); }} className="p-3 rounded-xl bg-white/5 text-[#A7ACB8] hover:text-[#4F46E5] transition-all"><Download className="w-5 h-5" /></button>
+            <button 
+              onClick={() => { setSelectedInvoice(invoice); setIsInvoiceOpen(true); }}
+              className="p-3 rounded-xl bg-white/5 text-[#A7ACB8] hover:text-[#4F46E5] hover:bg-[#4F46E5]/10 transition-all"
+            >
+              <Download className="w-5 h-5" />
+            </button>
           </div>
         );
       })}
@@ -271,34 +337,37 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen pt-24 rv-container flex flex-col items-center justify-center">
+      <div className="min-h-screen pt-24 pb-16 rv-container flex flex-col items-center justify-center">
          <div className="w-12 h-12 border-4 border-[#4F46E5]/20 border-t-[#4F46E5] rounded-full animate-spin mb-4" />
-         <p className="text-[#A7ACB8]">Syncing Dashboard Data...</p>
+         <p className="text-[#A7ACB8] font-medium animate-pulse">Syncing Dashboard Data...</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-[#05060B]">
+      {/* Print Styles හරිම විදියට හදමු */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: A4; margin: 0; }
-          body * { visibility: hidden; }
-          .print-section, .print-section * { visibility: visible; }
-          .print-section { 
-            position: fixed; left: 0; top: 0; width: 100%; height: 100%;
-            padding: 15mm !important; background: white !important; 
-            z-index: 9999; color: #1e293b !important;
+          body > *:not(.print-container) { display: none !important; }
+          .print-container { 
+            position: absolute; left: 0; top: 0; width: 100%; height: auto;
+            background: white !important; z-index: 99999; margin: 0; padding: 0;
           }
           .no-print { display: none !important; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .print-section { padding: 40px !important; box-shadow: none !important; width: 100% !important; }
         }
       `}} />
 
       <div className="rv-container">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-4xl md:text-5xl font-black text-[#F4F6FF]">Dashboard</h1>
+            <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full bg-[#4F46E5]" />
+                <span className="text-[10px] font-bold text-[#4F46E5] uppercase tracking-[0.2em]">User Command Center</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black text-[#F4F6FF] tracking-tight">Dashboard</h1>
             <p className="text-[#A7ACB8] mt-2 font-medium">Welcome back, <span className="text-white">{user?.fullName}</span></p>
           </div>
           <button onClick={() => onNavigate('software')} className="rv-btn-primary px-8 py-4 rounded-2xl flex items-center gap-3">
@@ -307,8 +376,19 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
 
         <div className="flex flex-wrap gap-2 mb-10 p-1.5 bg-white/[0.02] border border-white/5 rounded-2xl w-fit">
-          {[{ id: 'overview', label: 'Overview', icon: Activity }, { id: 'licenses', label: 'Licenses', icon: Key }, { id: 'purchases', label: 'History', icon: CreditCard }, { id: 'invoices', label: 'Invoices', icon: FileText }].map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl transition-all ${activeTab === tab.id ? 'bg-[#4F46E5] text-white shadow-lg' : 'text-[#A7ACB8] hover:text-white hover:bg-white/5'}`}>
+          {[
+            { id: 'overview', label: 'Overview', icon: Activity },
+            { id: 'licenses', label: 'Licenses', icon: Key },
+            { id: 'purchases', label: 'History', icon: CreditCard },
+            { id: 'invoices', label: 'Invoices', icon: FileText },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl transition-all ${
+                activeTab === tab.id ? 'bg-[#4F46E5] text-white' : 'text-[#A7ACB8] hover:bg-white/5'
+              }`}
+            >
               <tab.icon className="w-4 h-4" /> {tab.label}
             </button>
           ))}
@@ -325,29 +405,32 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* --- INVOICE PREVIEW MODAL --- */}
       {isInvoiceOpen && selectedInvoice && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm no-print">
-          <div className="bg-[#1A1D24] border border-white/10 w-full max-w-2xl rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
+          <div className="bg-[#1A1D24] border border-white/10 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl print-container">
+            
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5 no-print">
               <h3 className="text-[#F4F6FF] font-semibold">Invoice Preview</h3>
               <div className="flex gap-2">
                 <button onClick={() => window.print()} className="rv-btn-primary py-1.5 px-3 text-sm flex items-center gap-2">
-                  <Download className="w-4 h-4" /> Print / Save PDF
+                  <Download className="w-4 h-4" /> Download PDF
                 </button>
-                <button onClick={() => setIsInvoiceOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-[#A7ACB8]"><X className="w-5 h-5" /></button>
+                <button onClick={() => setIsInvoiceOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-[#A7ACB8]">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
-            <div className="p-4 md:p-8 max-h-[80vh] overflow-y-auto bg-slate-100">
-              <div className="print-section bg-white p-8 text-slate-800 shadow-xl rounded-sm mx-auto w-full">
+            <div className="p-6 max-h-[85vh] overflow-y-auto bg-[#F4F6FF] print-section">
+              <div className="bg-white p-8 text-slate-800 rounded-lg mx-auto">
                 <div className="flex justify-between items-start border-b-2 border-slate-100 pb-6 mb-6">
                   <div>
-                    <img src="https://i.postimg.cc/4d76Jq41/RV-DEVELOPERS-LOGO.jpg" alt="RV Logo" className="w-16 h-16 object-contain mb-2" />
-                    <h2 className="text-xl font-black text-[#4F46E5] uppercase">RV Developers</h2>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Premium Software Solutions</p>
+                    <img src="https://i.postimg.cc/4d76Jq41/RV-DEVELOPERS-LOGO.jpg" alt="RV Logo" className="w-16 h-16 object-contain mb-3" />
+                    <h2 className="text-xl font-black text-[#4F46E5] uppercase tracking-tight">RV Developers</h2>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Premium Software Solutions</p>
                   </div>
                   <div className="text-right">
-                    <h1 className="text-3xl font-light text-slate-300 tracking-widest">INVOICE</h1>
-                    <p className="text-sm font-bold text-slate-700">#{selectedInvoice.invoiceNumber || 'INV-' + selectedInvoice.id.slice(0,6)}</p>
-                    <p className="text-xs text-slate-500 mt-1">Date: {new Date(selectedInvoice.createdAt).toLocaleDateString()}</p>
+                    <h1 className="text-3xl font-light text-slate-400 mb-1 tracking-widest">INVOICE</h1>
+                    <p className="text-sm font-bold text-slate-700">#{selectedInvoice.invoiceNumber}</p>
+                    <p className="text-xs text-slate-500 mt-1">{new Date(selectedInvoice.createdAt).toLocaleDateString('en-GB')}</p>
                   </div>
                 </div>
 
@@ -355,45 +438,57 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <div>
                     <p className="text-[10px] uppercase text-slate-400 font-bold mb-2">Billed To:</p>
                     <p className="font-bold text-slate-700">{user?.fullName}</p>
-                    <p className="text-xs text-slate-500 leading-relaxed">Email: {user?.email}<br />Status: <span className="text-green-600 font-bold uppercase">Paid</span></p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Email: {user?.email}<br />
+                      Status: <span className="text-green-600 font-bold uppercase">Paid</span>
+                    </p>
                   </div>
-                  <div className="text-right text-xs text-slate-500">
-                    <p className="text-[10px] uppercase text-slate-400 font-bold mb-2">Payment Method:</p>
-                    <p className="font-bold text-slate-700 capitalize">{selectedInvoice.paymentMethod?.replace('_', ' ') || 'Online Payment'}</p>
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase text-slate-400 font-bold mb-2">Payment Details:</p>
+                    <p className="text-xs text-slate-700 font-medium capitalize">{selectedInvoice.paymentMethod?.replace('_', ' ') || 'Online Payment'}</p>
+                    <p className="text-[10px] uppercase text-slate-400 font-bold mt-4 mb-1">Purchase Date:</p>
+                    <p className="text-xs text-slate-500">{new Date(selectedInvoice.createdAt).toLocaleString('en-GB')}</p>
                   </div>
                 </div>
 
                 <table className="w-full mb-8">
                   <thead>
                     <tr className="bg-slate-50 border-y border-slate-100">
-                      <th className="py-3 px-2 text-left text-[10px] uppercase text-slate-400 font-bold">Product Description</th>
+                      <th className="py-3 px-2 text-left text-[10px] uppercase text-slate-400 font-bold">Description</th>
                       <th className="py-3 px-2 text-center text-[10px] uppercase text-slate-400 font-bold">Qty</th>
-                      <th className="py-3 px-2 text-right text-[10px] uppercase text-slate-400 font-bold">Price</th>
+                      <th className="py-3 px-2 text-right text-[10px] uppercase text-slate-400 font-bold">Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     <tr>
                       <td className="py-4 px-2">
-                        <p className="font-bold text-slate-700">{softwareMap[selectedInvoice.softwareId]?.name || 'Software License'}</p>
-                        <p className="text-[10px] text-slate-400">Full Access Perpetual License</p>
+                        <p className="font-bold text-slate-700">{softwareMap[selectedInvoice.softwareId]?.name || 'Software Product'}</p>
+                        <p className="text-[10px] text-slate-400">Full Access License Activation</p>
                       </td>
-                      <td className="py-4 px-2 text-center text-sm">01</td>
-                      <td className="py-4 px-2 text-right font-bold">LKR {selectedInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td className="py-4 px-2 text-center text-sm text-slate-600">01</td>
+                      <td className="py-4 px-2 text-right font-bold text-slate-700">{formatCurrency(selectedInvoice.amount)}</td>
                     </tr>
                   </tbody>
                 </table>
 
-                <div className="flex justify-end mb-10">
-                  <div className="w-full max-w-[200px] space-y-2 border-t border-slate-100 pt-4">
-                    <div className="flex justify-between text-sm font-bold text-slate-800">
-                      <span>Total Paid:</span>
-                      <span className="text-[#4F46E5]">LKR {selectedInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <div className="flex justify-end mb-12">
+                  <div className="w-full max-w-[240px] space-y-2">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Subtotal:</span>
+                      <span>{formatCurrency(selectedInvoice.amount)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-200 pt-2 font-bold text-slate-800 text-lg">
+                      <span>Total:</span>
+                      <span className="text-[#4F46E5]">{formatCurrency(selectedInvoice.amount)}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="border-t border-slate-100 pt-6 text-center">
-                  <p className="text-[10px] text-slate-400 italic">Thank you for choosing RV Developers. This is a computer-generated receipt.</p>
+                  <p className="text-[10px] text-slate-400 italic">
+                    This is a computer-generated document. No signature required. <br/>
+                    Thank you for choosing RV Developers.
+                  </p>
                 </div>
               </div>
             </div>
