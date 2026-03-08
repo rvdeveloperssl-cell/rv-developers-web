@@ -14,11 +14,8 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { softwareService } from '@/services/mockSoftwareService';
-import { licenseService } from '@/services/licenseService';
-import { paymentService } from '@/services/mockPaymentService';
-import type { Software, License, Purchase, Invoice } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import type { Software, License, Purchase, Invoice } from '@/types';
 
 interface DashboardProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
@@ -33,9 +30,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [softwareMap, setSoftwareMap] = useState<Record<string, Software>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'licenses' | 'purchases' | 'invoices'>('overview');
-
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -65,18 +59,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         return [];
       };
 
-      const licData = results[0].status === 'fulfilled' ? results[0].value : [];
-      setLicenses(getData(licData));
+      setLicenses(getData(results[0].status === 'fulfilled' ? results[0].value : []));
+      setPurchases(getData(results[1].status === 'fulfilled' ? results[1].value : []));
+      setInvoices(getData(results[2].status === 'fulfilled' ? results[2].value : []));
 
-      const purData = results[1].status === 'fulfilled' ? results[1].value : [];
-      setPurchases(getData(purData));
-
-      const invData = results[2].status === 'fulfilled' ? results[2].value : [];
-      setInvoices(getData(invData));
-
-      const softData = results[3].status === 'fulfilled' ? results[3].value : [];
-      const softwares = getData(softData);
-      
+      const softwares = getData(results[3].status === 'fulfilled' ? results[3].value : []);
       const softwareMapData: Record<string, Software> = {};
       softwares.forEach((s: Software) => {
         softwareMapData[s.id] = s;
@@ -84,13 +71,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       setSoftwareMap(softwareMapData);
       
     } catch (error) {
-      console.error("MySQL Dashboard Load Error:", error);
+      console.error("Dashboard Load Error:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const copyLicenseKey = (key: string) => {
+    if (!key) return;
     navigator.clipboard.writeText(key);
     toast({
       title: 'Copied!',
@@ -98,42 +86,43 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     });
   };
 
-  const stats = [
-  {
-    icon: Package,
-    label: 'Purchased Software',
-    value: purchases?.length || 0,
-    color: 'bg-[#4F46E5]/10 text-[#4F46E5]',
-  },
-  {
-    icon: Key,
-    label: 'Active Licenses',
-    // .toLowerCase() පාවිච්චි කරලා active ද කියලා බලනවා, එවිට database එකේ කොහොම තිබ්බත් හරි යනවා
-    value: licenses?.filter((l) => l.status?.toString().toLowerCase() === 'active').length || 0,
-    color: 'bg-emerald-500/10 text-emerald-400',
-  },
-  {
-    icon: CreditCard,
-    label: 'Total Spent',
-    value: `LKR ${(purchases || [])
-      .filter((p) => p.paymentStatus === 'verified')
-      .reduce((sum, p) => sum + Number(p.amount || 0), 0)
-      .toLocaleString('en-LK', { 
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2 
-      })}`,
-    color: 'bg-purple-500/10 text-purple-400',
-  },
-  {
-    icon: FileText,
-    label: 'Invoices',
-    value: invoices?.length || 0,
-    color: 'bg-slate-500/10 text-slate-400',
-  },
-];
+  // Stats calculation with proper database status checking
+  const stats = useMemo(() => [
+    {
+      icon: Package,
+      label: 'Purchased Software',
+      value: purchases?.length || 0,
+      color: 'bg-[#4F46E5]/10 text-[#4F46E5]',
+    },
+    {
+      icon: Key,
+      label: 'Active Licenses',
+      value: licenses?.filter((l) => l.status?.toString().toLowerCase() === 'active').length || 0,
+      color: 'bg-emerald-500/10 text-emerald-400',
+    },
+    {
+      icon: CreditCard,
+      label: 'Total Spent',
+      value: `LKR ${(purchases || [])
+        .filter((p) => {
+          const s = p.paymentStatus?.toLowerCase();
+          return s === 'verified' || s === 'paid' || s === 'success';
+        })
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        .toLocaleString('en-LK', { minimumFractionDigits: 2 })}`,
+      color: 'bg-purple-500/10 text-purple-400',
+    },
+    {
+      icon: FileText,
+      label: 'Invoices',
+      value: invoices?.length || 0,
+      color: 'bg-slate-500/10 text-slate-400',
+    },
+  ], [purchases, licenses, invoices]);
 
   const renderOverview = () => (
     <div className="space-y-10">
+      {/* Stats Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <div key={stat.label} className="rv-panel p-6 border border-white/5 hover:border-white/10 transition-all">
@@ -146,88 +135,61 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         ))}
       </div>
 
+      {/* Inventory Preview */}
       <div>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-1 h-6 bg-[#4F46E5] rounded-full"></div>
             <h3 className="text-xl font-bold text-[#F4F6FF]">My Software Inventory</h3>
           </div>
-          <button
-            onClick={() => setActiveTab('licenses')}
-            className="text-sm font-medium text-[#4F46E5] hover:text-[#3f38c2] flex items-center gap-1 transition-colors"
-          >
-            Manage All
-            <ArrowRight className="w-4 h-4" />
+          <button onClick={() => setActiveTab('licenses')} className="text-sm font-medium text-[#4F46E5] flex items-center gap-1 hover:underline">
+            Manage All <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
         {licenses.length === 0 ? (
           <div className="rv-panel p-12 text-center border-dashed border-white/10">
-            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-10 h-10 text-white/20" />
-            </div>
-            <h4 className="text-[#F4F6FF] font-semibold text-lg">No active software found</h4>
-            <p className="text-[#A7ACB8] mt-2 mb-6">Start your journey by exploring our premium software collection.</p>
-            <button onClick={() => onNavigate('software')} className="rv-btn-primary">
-              Browse Software
-            </button>
+            <Zap className="w-10 h-10 text-white/10 mx-auto mb-4" />
+            <h4 className="text-[#F4F6FF] font-medium">No active software found</h4>
+            <button onClick={() => onNavigate('software')} className="rv-btn-primary mt-4">Browse Software</button>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             {licenses.slice(0, 6).map((license) => {
               const software = softwareMap[license.softwareId];
               return (
-                <div key={license.id} className="rv-panel group overflow-hidden p-0 border border-white/5 hover:border-[#4F46E5]/30 transition-all duration-300">
-                  <div className="relative aspect-[16/9]">
-                    <img 
-                      src={software?.imageUrl} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                      alt={software?.name}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] via-[#0B0E16]/20 to-transparent" />
-                    <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                      <span className="rv-badge bg-[#4F46E5] text-white border-none text-[10px] uppercase tracking-wider font-bold">
-                        {software?.category || 'Software'}
-                      </span>
-                      <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-xs text-emerald-400 font-medium capitalize">{license.status}</span>
+                <div key={license.id} className="rv-panel group overflow-hidden p-0 border border-white/5 hover:border-[#4F46E5]/30 transition-all">
+                   <div className="relative aspect-video overflow-hidden">
+                      <img src={software?.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] to-transparent" />
+                      <div className="absolute bottom-3 left-3">
+                        <span className="rv-badge bg-[#4F46E5] text-[10px]">{software?.category || 'Software'}</span>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="p-5">
-                    <h3 className="text-lg font-bold text-[#F4F6FF] group-hover:text-[#4F46E5] transition-colors line-clamp-1">
-                      {software?.name || 'Loading...'}
-                    </h3>
-                    
-                    <div className="mt-4 space-y-3">
-                      <div className="bg-black/40 rounded-lg p-3 border border-white/5">
-                        <div className="text-[10px] text-[#A7ACB8] uppercase tracking-widest mb-1 font-bold">License Key</div>
-                        <div className="flex items-center justify-between">
-                          <code className="text-[#4F46E5] font-mono text-sm tracking-tight">{license.licenseKey}</code>
-                          <button 
-                            onClick={() => copyLicenseKey(license.licenseKey)}
-                            className="text-[#A7ACB8] hover:text-white p-1 transition-colors"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        {software?.downloadUrl && (
-                          <button className="flex-1 rv-btn-primary py-2.5 text-xs flex items-center justify-center gap-2">
-                            <Download className="w-4 h-4" /> Download
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => onNavigate('software-detail', { id: software?.id })}
-                          className="px-3 py-2.5 rounded-lg bg-white/5 text-[#A7ACB8] hover:bg-white/10 hover:text-white transition-all border border-white/10"
-                        >
-                          <ExternalLink className="w-4 h-4" />
+                   </div>
+                   <div className="p-5">
+                    <h3 className="text-lg font-bold text-[#F4F6FF] mb-4 line-clamp-1">{software?.name || 'Loading Asset...'}</h3>
+                    <div className="bg-black/40 rounded-lg p-3 border border-white/5 mb-4">
+                      <div className="text-[10px] text-[#A7ACB8] uppercase tracking-widest mb-1">License Key</div>
+                      <div className="flex items-center justify-between">
+                        <code className="text-[#4F46E5] font-mono text-sm">{license.licenseKey}</code>
+                        <button onClick={() => copyLicenseKey(license.licenseKey)} className="text-[#A7ACB8] hover:text-white">
+                          <Copy className="w-4 h-4" />
                         </button>
                       </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => software?.downloadUrl && window.open(software.downloadUrl, '_blank')}
+                        className="flex-1 rv-btn-primary py-2.5 text-xs flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-4 h-4" /> Download
+                      </button>
+                      <button 
+                         onClick={() => onNavigate('software-detail', { id: software?.id })}
+                         className="p-2.5 rounded-lg bg-white/5 border border-white/10 text-[#A7ACB8] hover:text-white"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -237,31 +199,27 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         )}
       </div>
 
+      {/* Recent Activity Table */}
       <div className="rv-panel p-6 border border-white/5">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-[#F4F6FF]">Recent Transactions</h3>
-          <button onClick={() => setActiveTab('purchases')} className="text-xs text-[#A7ACB8] hover:text-white underline decoration-[#4F46E5] underline-offset-4">
-            View Statement
-          </button>
-        </div>
-
+        <h3 className="text-lg font-bold text-[#F4F6FF] mb-6">Recent Transactions</h3>
         <div className="space-y-3">
           {purchases.slice(0, 3).map((purchase) => {
             const software = softwareMap[purchase.softwareId];
+            const isVerified = ['verified', 'paid', 'success'].includes(purchase.paymentStatus?.toLowerCase());
             return (
-              <div key={purchase.id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
+              <div key={purchase.id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 bg-white/5">
                     <img src={software?.imageUrl} className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <div className="text-[#F4F6FF] font-semibold text-sm">{software?.name}</div>
+                    <div className="text-[#F4F6FF] font-semibold text-sm">{software?.name || 'Purchase'}</div>
                     <div className="text-[11px] text-[#A7ACB8]">{new Date(purchase.createdAt).toDateString()}</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[#F4F6FF] font-bold text-sm">LKR {purchase.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</div>
-                  <div className={`text-[10px] font-bold uppercase tracking-tighter ${purchase.paymentStatus === 'verified' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <div className="text-[#F4F6FF] font-bold text-sm">LKR {Number(purchase.amount).toLocaleString('en-LK')}</div>
+                  <div className={`text-[10px] font-bold uppercase ${isVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {purchase.paymentStatus}
                   </div>
                 </div>
@@ -274,92 +232,86 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   );
 
   const renderLicenses = () => (
-  <div className="space-y-6">
-    <div className="flex items-center gap-3 mb-2">
-      <Key className="w-6 h-6 text-[#4F46E5]" />
-      <h3 className="text-2xl font-bold text-[#F4F6FF]">Managed Licenses</h3>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-6">
+        <Key className="w-6 h-6 text-[#4F46E5]" />
+        <h3 className="text-2xl font-bold text-[#F4F6FF]">Managed Licenses</h3>
+      </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        {licenses.map((license) => {
+          const software = softwareMap[license.softwareId];
+          const isLifetime = !license.expiresAt || license.expiresAt === null || license.expiresAt === "";
+          const isActive = license.status?.toString().toLowerCase() === 'active';
+
+          return (
+            <div key={license.id} className="rv-panel p-6 border border-white/5 hover:border-[#4F46E5]/20 transition-all">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex gap-4">
+                  <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                    <img src={software?.imageUrl} className="w-full h-full object-cover" alt="" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name || 'Software Product'}</h4>
+                    <p className="text-xs text-[#A7ACB8]">Version {software?.version || '1.0.0'}</p>
+                  </div>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                  isActive 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                  : 'bg-red-500/10 text-red-400 border-red-500/20'
+                }`}>
+                  {license.status}
+                </span>
+              </div>
+
+              <div className="bg-[#05060B] rounded-xl p-4 border border-white/5 mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-[#A7ACB8] font-bold uppercase tracking-widest">Master License Key</span>
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#4F46E5]" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <code className="text-lg text-[#F4F6FF] font-mono tracking-wider break-all">
+                    {license.licenseKey}
+                  </code>
+                  <button onClick={() => copyLicenseKey(license.licenseKey)} className="p-2 text-[#A7ACB8] hover:text-white transition-colors">
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-white/[0.02] p-3 rounded-lg text-center border border-white/5">
+                  <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Activations</div>
+                  <div className="text-[#F4F6FF] text-sm font-bold">
+                    {license.currentActivations || 0} / {license.maxActivations || 1}
+                  </div>
+                </div>
+                <div className="bg-white/[0.02] p-3 rounded-lg text-center border border-white/5">
+                  <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Issued</div>
+                  <div className="text-[#F4F6FF] text-sm font-bold">
+                    {license.createdAt ? new Date(license.createdAt).toLocaleDateString('en-GB') : 'N/A'}
+                  </div>
+                </div>
+                <div className="bg-white/[0.02] p-3 rounded-lg text-center border border-white/5">
+                  <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Expiry</div>
+                  <div className={`text-sm font-bold ${isLifetime ? 'text-amber-400' : 'text-[#F4F6FF]'}`}>
+                    {isLifetime ? 'Lifetime' : new Date(license.expiresAt!).toLocaleDateString('en-GB')}
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => software?.downloadUrl && window.open(software.downloadUrl, '_blank')}
+                className="w-full mt-4 rv-btn-primary py-3 text-xs flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" /> Download Software Assets
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
-    <div className="grid md:grid-cols-2 gap-6">
-      {licenses.map((license) => {
-        const software = softwareMap[license.softwareId];
-        // Date පරීක්ෂාව මෙතනදී කරනවා
-        const isLifetime = !license.expiresAt || license.expiresAt === "" || license.expiresAt === null;
-
-        return (
-          <div key={license.id} className="rv-panel p-6 border border-white/5 hover:border-[#4F46E5]/20 transition-all">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex gap-4">
-                <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10">
-                  <img src={software?.imageUrl} className="w-full h-full object-cover" alt="" />
-                </div>
-                <div>
-                  <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name}</h4>
-                  <p className="text-xs text-[#A7ACB8]">Version {software?.version || '1.0.0'}</p>
-                </div>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                license.status?.toString().toLowerCase() === 'active' 
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                : 'bg-red-500/10 text-red-400 border border-red-500/20'
-              }`}>
-                {license.status}
-              </span>
-            </div>
-
-            {/* Master License Key - මෙතන තමයි Key එක පෙන්වන්නේ */}
-            <div className="bg-[#05060B] rounded-xl p-4 border border-white/5 mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] text-[#A7ACB8] font-bold uppercase tracking-widest">Master License Key</span>
-                <ShieldCheck className="w-3.5 h-3.5 text-[#4F46E5]" />
-              </div>
-              <div className="flex items-center justify-between">
-                {/* Key එක පෙන්වන code එක */}
-                <code className="text-lg text-[#F4F6FF] font-mono tracking-wider break-all mr-2">
-                  {license.licenseKey}
-                </code>
-                <button 
-                  onClick={() => copyLicenseKey(license.licenseKey)} 
-                  className="p-2.5 rounded-lg bg-white/5 text-[#A7ACB8] hover:text-white hover:bg-[#4F46E5] transition-all shrink-0"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Bottom Data Grid */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Activations</div>
-                <div className="text-[#F4F6FF] text-sm font-bold">
-                  {license.currentActivations || 0} / {license.maxActivations || 1}
-                </div>
-              </div>
-              <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Issued</div>
-                <div className="text-[#F4F6FF] text-sm font-bold">
-                  {license.createdAt ? new Date(license.createdAt).toLocaleDateString('en-GB') : 'N/A'}
-                </div>
-              </div>
-              <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Expiry</div>
-                <div className={`text-sm font-bold ${isLifetime ? 'text-amber-400' : 'text-[#F4F6FF]'}`}>
-                  {isLifetime ? 'Lifetime' : new Date(license.expiresAt).toLocaleDateString('en-GB')}
-                </div>
-              </div>
-            </div>
-
-            <button 
-              onClick={() => software?.downloadUrl && window.open(software.downloadUrl, '_blank')}
-              className="w-full mt-4 rv-btn-primary py-3 text-xs flex items-center justify-center gap-2"
-            >
-              <Download className="w-4 h-4" /> Download Software Assets
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  </div>
-);
+  );
 
   const renderPurchases = () => (
     <div className="rv-panel p-6 border border-white/5">
