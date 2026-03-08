@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Search, Mail, Phone, Building, Calendar, Loader2, UserCheck, UserMinus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface Client {
   id: string;
@@ -7,37 +8,70 @@ interface Client {
   email: string;
   phone?: string;
   companyName?: string;
+  nic?: string;
   createdAt: string;
   role: string;
+  isVerified: boolean | number;
 }
 
 export default function AdminClients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const { toast } = useToast();
 
-  // ENV එකේ අගට / තිබ්බොත් ඒක අයින් කරලා clean URL එකක් ගන්නවා
   const rawApiUrl = import.meta.env.VITE_API_URL || "";
   const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
-  useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/admin/clients`);
-        const data = await response.json();
-        // Backend එකෙන් කෙලින්ම Array එකක් එන නිසා මේ විදිහට set කරනවා
-        setClients(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("Error loading clients:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchClients = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/clients`);
+      const data = await response.json();
+      setClients(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error loading clients:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchClients();
   }, [API_URL]);
 
-  // Search filter එක (companyName එකත් එක්කම)
+  // Client කෙනෙක්ව Verify හෝ Unverify කරන Function එක
+  const handleToggleVerify = async (id: string, currentStatus: any) => {
+    // දැනට තියෙන status එකේ අනිත් පැත්ත (toggle) යවනවා
+    const newStatus = !currentStatus; 
+    
+    try {
+      const response = await fetch(`${API_URL}/api/admin/clients/${id}/verify`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isVerified: newStatus }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `Client ${newStatus ? 'verified' : 'unverified'} successfully`,
+        });
+        // Table එකේ දත්ත refresh කරනවා
+        fetchClients();
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to update client status",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredClients = clients.filter((c) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -59,7 +93,6 @@ export default function AdminClients() {
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="rv-container">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-[#F4F6FF]">Client Management</h1>
@@ -67,7 +100,6 @@ export default function AdminClients() {
           </div>
         </div>
 
-        {/* Search */}
         <div className="mb-6">
           <div className="relative max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A7ACB8]" />
@@ -81,7 +113,6 @@ export default function AdminClients() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <div className="rv-panel p-6">
             <div className="text-3xl font-bold text-[#F4F6FF]">{clients.length}</div>
@@ -89,7 +120,7 @@ export default function AdminClients() {
           </div>
           <div className="rv-panel p-6">
             <div className="text-3xl font-bold text-[#F4F6FF]">
-              {clients.filter((c) => c.isVerified).length}
+              {clients.filter((c) => c.isVerified == 1 || c.isVerified === true).length}
             </div>
             <div className="text-sm text-[#A7ACB8]">Verified Clients</div>
           </div>
@@ -101,7 +132,6 @@ export default function AdminClients() {
           </div>
         </div>
 
-        {/* Clients Table */}
         <div className="rv-panel overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -111,11 +141,12 @@ export default function AdminClients() {
                 <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Company</th>
                 <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Joined</th>
                 <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Status</th>
+                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredClients.map((client) => (
-                <tr key={client.id} className="border-b border-[rgba(244,246,255,0.05)]">
+                <tr key={client.id} className="border-b border-[rgba(244,246,255,0.05)] hover:bg-white/[0.02]">
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-white font-medium">
@@ -123,7 +154,7 @@ export default function AdminClients() {
                       </div>
                       <div>
                         <div className="text-[#F4F6FF] font-medium">{client.fullName}</div>
-                        <div className="text-sm text-[#A7ACB8]">{client.nic}</div>
+                        <div className="text-sm text-[#A7ACB8]">{client.nic || 'No NIC'}</div>
                       </div>
                     </div>
                   </td>
@@ -135,7 +166,7 @@ export default function AdminClients() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-[#A7ACB8]">
                         <Phone className="w-4 h-4" />
-                        {client.phone}
+                        {client.phone || 'No Phone'}
                       </div>
                     </div>
                   </td>
@@ -157,14 +188,30 @@ export default function AdminClients() {
                   </td>
                   <td className="py-4 px-4">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs ${
-                        client.isVerified
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        (client.isVerified == 1 || client.isVerified === true)
                           ? 'bg-green-500/20 text-green-400'
                           : 'bg-yellow-500/20 text-yellow-400'
                       }`}
                     >
-                      {client.isVerified ? 'Verified' : 'Pending'}
+                      {(client.isVerified == 1 || client.isVerified === true) ? 'Verified' : 'Pending'}
                     </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <button
+                      onClick={() => handleToggleVerify(client.id, client.isVerified)}
+                      className={`p-2 rounded-lg transition-all ${
+                        (client.isVerified == 1 || client.isVerified === true)
+                          ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                          : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                      }`}
+                      title={(client.isVerified == 1 || client.isVerified === true) ? "Unverify Client" : "Verify Client"}
+                    >
+                      {(client.isVerified == 1 || client.isVerified === true) 
+                        ? <UserMinus className="w-4 h-4" /> 
+                        : <UserCheck className="w-4 h-4" />
+                      }
+                    </button>
                   </td>
                 </tr>
               ))}
