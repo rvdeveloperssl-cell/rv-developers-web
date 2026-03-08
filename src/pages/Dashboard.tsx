@@ -273,64 +273,75 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   );
 
   const renderLicenses = () => (
-    <div className="space-y-6">
-        <div className="flex items-center gap-3 mb-2">
-           <Key className="w-6 h-6 text-[#4F46E5]" />
-           <h3 className="text-2xl font-bold text-[#F4F6FF]">Managed Licenses</h3>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-           {licenses.map((license) => {
-             const software = softwareMap[license.softwareId];
-             return (
-               <div key={license.id} className="rv-panel p-6 border border-white/5">
-                 <div className="flex justify-between items-start mb-6">
-                   <div className="flex gap-4">
-                     <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                        <img src={software?.imageUrl} className="w-full h-full object-cover" />
-                     </div>
-                     <div>
-                       <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name}</h4>
-                       <p className="text-xs text-[#A7ACB8]">Version {software?.version || '1.0.0'}</p>
-                     </div>
-                   </div>
-                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${license.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                     {license.status}
-                   </span>
-                 </div>
-
-                 <div className="bg-[#05060B] rounded-xl p-4 border border-white/5 mb-6">
-                   <div className="flex items-center justify-between mb-2">
-                     <span className="text-[10px] text-[#A7ACB8] font-bold uppercase tracking-widest">Master License Key</span>
-                     <ShieldCheck className="w-3 h-3 text-[#4F46E5]" />
-                   </div>
-                   <div className="flex items-center justify-between">
-                     <code className="text-lg text-[#F4F6FF] font-mono tracking-wider">{license.licenseKey}</code>
-                     <button onClick={() => copyLicenseKey(license.licenseKey)} className="rv-btn-secondary p-2 rounded-lg">
-                        <Copy className="w-4 h-4" />
-                     </button>
-                   </div>
-                 </div>
-
-                 <div className="grid grid-cols-3 gap-2">
-                   <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                     <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Activations</div>
-                     <div className="text-[#F4F6FF] text-sm font-bold">{license.currentActivations}/{license.maxActivations}</div>
-                   </div>
-                   <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                     <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Issued</div>
-                     <div className="text-[#F4F6FF] text-sm font-bold">{new Date(license.createdAt).toLocaleDateString()}</div>
-                   </div>
-                   <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                     <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Expiry</div>
-                     <div className="text-[#F4F6FF] text-sm font-bold">{license.expiresAt ? new Date(license.expiresAt).toLocaleDateString() : 'Lifetime'}</div>
-                   </div>
-                 </div>
-               </div>
-             );
-           })}
-        </div>
+  <div className="space-y-6">
+    <div className="flex items-center gap-3 mb-2">
+      <Key className="w-6 h-6 text-[#4F46E5]" />
+      <h3 className="text-2xl font-bold text-[#F4F6FF]">Managed Licenses</h3>
     </div>
-  );
+    <div className="grid md:grid-cols-2 gap-4">
+      {licenses.map((license) => {
+        const software = softwareMap[license.softwareId];
+        return (
+          <div key={license.id} className="rv-panel p-6 border border-white/5">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex gap-4">
+                <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                  <img src={software?.imageUrl} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name}</h4>
+                  <p className="text-xs text-[#A7ACB8]">Version {software?.version || '1.0.0'}</p>
+                </div>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                license.status === 'active' 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+              }`}>
+                {license.status}
+              </span>
+            </div>
+
+            <div className="bg-[#05060B] rounded-xl p-4 border border-white/5 mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-[#A7ACB8] font-bold uppercase tracking-widest">Master License Key</span>
+                <ShieldCheck className="w-3 h-3 text-[#4F46E5]" />
+              </div>
+              <div className="flex items-center justify-between">
+                <code className="text-lg text-[#F4F6FF] font-mono tracking-wider">{license.licenseKey}</code>
+                <button onClick={() => copyLicenseKey(license.licenseKey)} className="rv-btn-secondary p-2 rounded-lg">
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* මෙතන තමයි ඔයාගේ අලුත් ටේබල් එකේ දත්ත පෙන්වන්නේ */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Activations</div>
+                <div className="text-[#F4F6FF] text-sm font-bold">
+                  {license.currentActivations || 0} / {license.maxActivations || 1}
+                </div>
+              </div>
+              <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Issued</div>
+                <div className="text-[#F4F6FF] text-sm font-bold">
+                  {license.createdAt ? new Date(license.createdAt).toLocaleDateString() : 'N/A'}
+                </div>
+              </div>
+              <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Expiry</div>
+                <div className="text-[#F4F6FF] text-sm font-bold">
+                  {license.expiresAt ? new Date(license.expiresAt).toLocaleDateString() : 'Lifetime'}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
 
   const renderPurchases = () => (
     <div className="rv-panel p-6 border border-white/5">
