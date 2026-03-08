@@ -32,7 +32,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     pendingPayments: 0,
     activeLicenses: 0,
   });
-  const [recentActivity] = useState(mockActivityLogs.slice(0, 5));
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [pendingPayments, setPendingPayments] = useState<Purchase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -56,7 +56,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      // Backend එකේ ඔයා හදපු API වලට කෙලින්ම කතා කරනවා
       const fetchSafe = async (path: string) => {
         const res = await fetch(`${API_URL}${path}`);
         if (!res.ok) return [];
@@ -64,37 +63,34 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         return Array.isArray(data) ? data : [];
       };
 
-      const [software, purchases, pending, clients] = await Promise.all([
+      // මෙතනට '/api/admin/activities/recent' එකතු කළා
+      const [software, purchases, pending, clients, activities] = await Promise.all([
         fetchSafe('/api/software/all'),
         fetchSafe('/api/admin/purchases/all'),
         fetchSafe('/api/admin/payments/pending'),
         fetchSafe('/api/admin/clients'),
+        fetchSafe('/api/admin/activities/recent'), // අලුත් API එක
       ]);
 
-      // Revenue සහ Active Licenses ගණනය කිරීම
+      // Stats ගණනය කිරීම (කලින් තිබූ විදිහටම)
       const verifiedPurchases = purchases.filter((p: any) => p.paymentStatus === 'verified');
       const totalRevenue = verifiedPurchases.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
       
-      // සටහන: ලයිසන්ස් සඳහා වෙනම API එකක් නැතිනම් purchases වලින් filter කරමු
-      const activeLicensesCount = verifiedPurchases.length; 
-
       setStats({
         totalClients: clients.length,
         totalSoftware: software.length,
         totalLicenses: purchases.length,
         totalRevenue,
         pendingPayments: pending.length,
-        activeLicenses: activeLicensesCount,
+        activeLicenses: verifiedPurchases.length,
       });
 
       setPendingPayments(pending.slice(0, 5));
+      setRecentActivity(activities); // මෙතනින් Activity ටික state එකට දානවා
+      
     } catch (error) {
       console.error("Dashboard Load Error:", error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load dashboard data. Please check backend connection.',
-        variant: 'destructive',
-      });
+      // toast error message...
     } finally {
       setIsLoading(false);
     }
