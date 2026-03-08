@@ -11,7 +11,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
-  X 
+  X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { softwareService } from '@/services/mockSoftwareService';
@@ -271,61 +271,61 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   const renderLicenses = () => (
     <div className="space-y-6">
-       <div className="flex items-center gap-3 mb-2">
-          <Key className="w-6 h-6 text-[#4F46E5]" />
-          <h3 className="text-2xl font-bold text-[#F4F6FF]">Managed Licenses</h3>
-       </div>
-       <div className="grid md:grid-cols-2 gap-4">
-          {licenses.map((license) => {
-            const software = softwareMap[license.softwareId];
-            return (
-              <div key={license.id} className="rv-panel p-6 border border-white/5">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex gap-4">
-                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                       <img src={software?.imageUrl} className="w-full h-full object-cover" />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name}</h4>
-                      <p className="text-xs text-[#A7ACB8]">Version {software?.version || '1.0.0'}</p>
-                    </div>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${license.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                    {license.status}
-                  </span>
-                </div>
+        <div className="flex items-center gap-3 mb-2">
+           <Key className="w-6 h-6 text-[#4F46E5]" />
+           <h3 className="text-2xl font-bold text-[#F4F6FF]">Managed Licenses</h3>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+           {licenses.map((license) => {
+             const software = softwareMap[license.softwareId];
+             return (
+               <div key={license.id} className="rv-panel p-6 border border-white/5">
+                 <div className="flex justify-between items-start mb-6">
+                   <div className="flex gap-4">
+                     <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                        <img src={software?.imageUrl} className="w-full h-full object-cover" />
+                     </div>
+                     <div>
+                       <h4 className="text-lg font-bold text-[#F4F6FF]">{software?.name}</h4>
+                       <p className="text-xs text-[#A7ACB8]">Version {software?.version || '1.0.0'}</p>
+                     </div>
+                   </div>
+                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${license.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                     {license.status}
+                   </span>
+                 </div>
 
-                <div className="bg-[#05060B] rounded-xl p-4 border border-white/5 mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] text-[#A7ACB8] font-bold uppercase tracking-widest">Master License Key</span>
-                    <ShieldCheck className="w-3 h-3 text-[#4F46E5]" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <code className="text-lg text-[#F4F6FF] font-mono tracking-wider">{license.licenseKey}</code>
-                    <button onClick={() => copyLicenseKey(license.licenseKey)} className="rv-btn-secondary p-2 rounded-lg">
-                       <Copy className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+                 <div className="bg-[#05060B] rounded-xl p-4 border border-white/5 mb-6">
+                   <div className="flex items-center justify-between mb-2">
+                     <span className="text-[10px] text-[#A7ACB8] font-bold uppercase tracking-widest">Master License Key</span>
+                     <ShieldCheck className="w-3 h-3 text-[#4F46E5]" />
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <code className="text-lg text-[#F4F6FF] font-mono tracking-wider">{license.licenseKey}</code>
+                     <button onClick={() => copyLicenseKey(license.licenseKey)} className="rv-btn-secondary p-2 rounded-lg">
+                        <Copy className="w-4 h-4" />
+                     </button>
+                   </div>
+                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                    <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Activations</div>
-                    <div className="text-[#F4F6FF] text-sm font-bold">{license.currentActivations}/{license.maxActivations}</div>
-                  </div>
-                  <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                    <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Issued</div>
-                    <div className="text-[#F4F6FF] text-sm font-bold">{new Date(license.createdAt).toLocaleDateString()}</div>
-                  </div>
-                  <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
-                    <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Expiry</div>
-                    <div className="text-[#F4F6FF] text-sm font-bold">{license.expiresAt ? new Date(license.expiresAt).toLocaleDateString() : 'Lifetime'}</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-       </div>
+                 <div className="grid grid-cols-3 gap-2">
+                   <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                     <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Activations</div>
+                     <div className="text-[#F4F6FF] text-sm font-bold">{license.currentActivations}/{license.maxActivations}</div>
+                   </div>
+                   <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                     <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Issued</div>
+                     <div className="text-[#F4F6FF] text-sm font-bold">{new Date(license.createdAt).toLocaleDateString()}</div>
+                   </div>
+                   <div className="bg-white/[0.02] p-3 rounded-lg border border-white/5 text-center">
+                     <div className="text-[9px] text-[#A7ACB8] uppercase font-bold mb-1">Expiry</div>
+                     <div className="text-[#F4F6FF] text-sm font-bold">{license.expiresAt ? new Date(license.expiresAt).toLocaleDateString() : 'Lifetime'}</div>
+                   </div>
+                 </div>
+               </div>
+             );
+           })}
+        </div>
     </div>
   );
 
@@ -420,19 +420,16 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: A4; margin: 0; }
-          body > *:not(.print-root) { display: none !important; }
-          .print-root { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+          body > *:not(.print-wrapper) { display: none !important; }
+          .print-wrapper { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
           .no-print { display: none !important; }
           .print-section { 
-            visibility: visible !important;
-            position: relative;
-            width: 100%;
-            height: auto;
             background: white !important; 
             color: black !important;
             padding: 20mm !important;
+            width: 100% !important;
+            height: auto !important;
           }
-          .print-section * { visibility: visible !important; color: black !important; }
         }
       `}} />
 
@@ -488,10 +485,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
       {isInvoiceOpen && selectedInvoice && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm no-print print-root">
-          <div className="bg-[#1A1D24] border border-white/10 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md no-print print-wrapper">
+          <div className="bg-[#1A1D24] border border-white/10 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col">
             
-            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5 no-print">
               <h3 className="text-[#F4F6FF] font-semibold">Invoice Preview</h3>
               <div className="flex gap-2">
                 <button onClick={() => window.print()} className="rv-btn-primary py-1.5 px-3 text-sm flex items-center gap-2">
@@ -503,8 +500,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               </div>
             </div>
 
-            <div className="p-6 max-h-[80vh] overflow-y-auto bg-slate-200">
-              <div className="print-section bg-white p-8 text-slate-800 shadow-sm rounded-lg mx-auto overflow-hidden">
+            <div className="p-6 max-h-[85vh] overflow-y-auto bg-[#F4F6FF]">
+              <div className="print-section bg-white p-8 text-slate-800 shadow-sm rounded-lg mx-auto overflow-hidden w-full">
                 <div className="flex justify-between items-start border-b-2 border-slate-100 pb-6 mb-6">
                   <div>
                     <img 
@@ -518,7 +515,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <div className="text-right">
                     <h1 className="text-3xl font-light text-slate-400 mb-1 tracking-widest">INVOICE</h1>
                     <p className="text-sm font-bold text-slate-700">#{selectedInvoice.invoiceNumber}</p>
-                    <p className="text-xs text-slate-500 mt-1">Date: {new Date(selectedInvoice.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-slate-500 mt-1">Invoice Date: {new Date(selectedInvoice.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
 
@@ -533,9 +530,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] uppercase text-slate-400 font-bold mb-2">Payment Details:</p>
-                    <p className="text-xs text-slate-700 font-medium capitalize">Method: {selectedInvoice.paymentMethod || 'Online'}</p>
+                    <p className="text-xs text-slate-700 font-medium capitalize">{selectedInvoice.paymentMethod?.replace('_', ' ') || 'Online Payment'}</p>
                     <p className="text-[10px] uppercase text-slate-400 font-bold mt-4 mb-1">Generated At:</p>
-                    <p className="text-[10px] text-slate-500">{new Date().toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-500">{new Date().toLocaleString('en-US', { hour12: true, dateStyle: 'medium', timeStyle: 'short' })}</p>
                   </div>
                 </div>
 
@@ -543,7 +540,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <thead>
                     <tr className="bg-slate-50 border-y border-slate-100">
                       <th className="py-3 px-2 text-left text-[10px] uppercase text-slate-400 font-bold">Description</th>
-                      <th className="py-3 px-2 text-center text-[10px] uppercase text-slate-400 font-bold">Qty</th>
+                      <th className="py-3 px-2 text-center text-[10px] uppercase text-slate-400 font-bold">Purchase Date</th>
                       <th className="py-3 px-2 text-right text-[10px] uppercase text-slate-400 font-bold">Amount</th>
                     </tr>
                   </thead>
@@ -551,17 +548,20 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <tr>
                       <td className="py-4 px-2">
                         <p className="font-bold text-slate-700">{softwareMap[selectedInvoice.softwareId]?.name || 'Software Product'}</p>
-                        <p className="text-[10px] text-slate-400">Full Access License Key</p>
-                        <p className="text-[10px] text-slate-500 mt-1">Purchased On: {new Date(selectedInvoice.createdAt).toLocaleDateString()}</p>
+                        <p className="text-[10px] text-slate-400">Lifetime Access License Key</p>
                       </td>
-                      <td className="py-4 px-2 text-center text-sm text-slate-600">01</td>
-                      <td className="py-4 px-2 text-right font-bold text-slate-700">LKR {selectedInvoice.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-4 px-2 text-center text-xs text-slate-600">
+                        {new Date(selectedInvoice.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-4 px-2 text-right font-bold text-slate-700">
+                        LKR {selectedInvoice.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
 
                 <div className="flex justify-end mb-12">
-                  <div className="w-full max-w-[200px] space-y-2">
+                  <div className="w-full max-w-[240px] space-y-2">
                     <div className="flex justify-between text-xs text-slate-500">
                       <span>Subtotal:</span>
                       <span>LKR {selectedInvoice.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
@@ -575,7 +575,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
                 <div className="border-t border-slate-100 pt-6 text-center">
                   <p className="text-[10px] text-slate-400 italic">
-                    Thank you for choosing RV Developers. This is an official digital receipt.
+                    Thank you for choosing RV Developers. This is a computer-generated official digital receipt.
                   </p>
                 </div>
               </div>
