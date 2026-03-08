@@ -91,8 +91,17 @@ export default function Checkout({ softwareId, onNavigate }: CheckoutProps) {
 
   const handleBankTransfer = async (e: React.FormEvent) => {
   e.preventDefault();
-  // මෙතන slipFile කියන්නේ ඔයා select කරපු image file එක
-  if (!user || !software || !slipFile) return;
+
+  // 1. ආරක්ෂිත පරීක්ෂාව (Null Safety Check)
+  // software? (optional chaining) හෝ software.id තිබේදැයි බලයි.
+  if (!user || !software || !software.id || !slipFile) {
+    toast({
+      title: 'Missing Details',
+      description: 'Software data is still loading or form is incomplete.',
+      variant: 'destructive',
+    });
+    return;
+  }
 
   setIsProcessing(true);
 
@@ -113,30 +122,34 @@ export default function Checkout({ softwareId, onNavigate }: CheckoutProps) {
       throw new Error('ImgBB Upload Failed');
     }
 
-    const directImageUrl = imgbbData.data.url; // ImgBB එකෙන් ලැබුණු URL එක
+    const directImageUrl = imgbbData.data.url;
 
-    // --- පියවර 2: ලැබුණු URL එක Backend එකට යැවීම ---
-    // මෙතනදී අපි slipFile එක වෙනුවට directImageUrl එක යවනවා
-   const result = await paymentService.submitBankTransfer(user.id, software.id, directImageUrl);
+    // --- පියවර 2: Backend එකට දත්ත යැවීම ---
+    // මෙහිදී software.id එක අනිවාර්යයෙන්ම තිබෙන බව අපි ඉහතදී තහවුරු කළා.
+    const result = await paymentService.submitBankTransfer(
+      user.id, 
+      software.id, 
+      directImageUrl
+    );
 
     if (result.success) {
       toast({
-        title: 'Slip Submitted',
-        description: 'Your payment is pending verification. You will receive an email once approved.',
+        title: 'Slip Submitted Successfully',
+        description: 'Invoice generated. Verification is pending (usually 24h).',
       });
       onNavigate('dashboard');
     } else {
       toast({
-        title: 'Error',
+        title: 'Submission Failed',
         description: result.message,
         variant: 'destructive',
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Payment Process Error:", error);
     toast({
       title: 'Error',
-      description: 'Failed to submit bank slip. Please try again.',
+      description: error.message || 'Failed to submit bank slip. Please try again.',
       variant: 'destructive',
     });
   } finally {
