@@ -418,20 +418,33 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   return (
     <div className="min-h-screen pt-24 pb-16 bg-[#05060B]">
       <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          @page { size: A4; margin: 0; }
-          body > *:not(.print-wrapper) { display: none !important; }
-          .print-wrapper { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
-          .no-print { display: none !important; }
-          .print-section { 
-            background: white !important; 
-            color: black !important;
-            padding: 20mm !important;
-            width: 100% !important;
-            height: auto !important;
-          }
-        }
-      `}} />
+  @media print {
+    /* මුළු screen එකම hide කරන්න */
+    body * {
+      visibility: hidden;
+    }
+    /* Invoice එක තියෙන container එක සහ එහි ඇතුළත දේවල් විතරක් පෙන්වන්න */
+    .print-section, .print-section * {
+      visibility: visible;
+    }
+    /* Invoice එක පිටුවේ ඉහළටම ගන්න */
+    .print-section {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 10mm !important;
+      background: white !important;
+      color: black !important;
+    }
+    /* පින්ට් වෙද්දී අනවශ්‍ය margins අයින් කරන්න */
+    @page {
+      size: auto;
+      margin: 0mm;
+    }
+  }
+`}} />
 
       <div className="rv-container">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
