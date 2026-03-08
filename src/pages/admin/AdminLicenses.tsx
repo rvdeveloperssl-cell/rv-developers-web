@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Search, Copy, Ban, CheckCircle, Calendar, RefreshCw, Clock } from 'lucide-react';
+import { Search, Copy, Ban, CheckCircle, RefreshCw, Calendar } from 'lucide-react';
 import { licenseService } from '@/services/licenseService';
 import { softwareService } from '@/services/mockSoftwareService';
+// mockUsers ඉවත් කරන ලදී - දැන් දත්ත එන්නේ backend එකෙන්
 import type { License, Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 
 interface AdminLicensesProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
 }
 
+// License interface එකට fullName එක් කරමු (Backend එකෙන් එන නිසා)
+type AdminLicense = License & { fullName?: string };
+
 export default function AdminLicenses({ onNavigate: _onNavigate }: AdminLicensesProps) {
-  const [licenses, setLicenses] = useState<(License & { fullName?: string })[]>([]);
+  const [licenses, setLicenses] = useState<AdminLicense[]>([]);
   const [softwareMap, setSoftwareMap] = useState<Record<string, Software>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -24,48 +27,26 @@ export default function AdminLicenses({ onNavigate: _onNavigate }: AdminLicenses
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // මෙතනදී අපි getAllLicenses API එකෙන් එන දත්ත කෙලින්ම ගන්නවා
       const [licensesData, softwareData] = await Promise.all([
-        licenseService.getAllLicenses(), // මෙහිදී backend එකෙන්ම fullName එක ලැබෙන ලෙස සකස් කළ යුතුයි
+        licenseService.getAllLicenses(),
         softwareService.getAllSoftware(),
       ]);
 
       setLicenses(licensesData);
 
       const map: Record<string, Software> = {};
-      softwareData.forEach((s: Software) => {
+      softwareData.forEach((s) => {
         map[s.id] = s;
       });
       setSoftwareMap(map);
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to sync with database',
+        description: 'Failed to sync with server',
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Expiry Date එක වෙනස් කිරීම (Admin ට කැමති දිනයක් දීමට)
-  const handleUpdateExpiry = async (id: string) => {
-    const newDate = prompt("Enter new Expiry Date (YYYY-MM-DD) or type 'lifetime':");
-    if (!newDate) return;
-
-    let finalExpiry = '';
-    if (newDate.toLowerCase() === 'lifetime') {
-      finalExpiry = '2099-12-31 23:59:59';
-    } else {
-      finalExpiry = `${newDate} 23:59:59`;
-    }
-
-    try {
-      await licenseService.updateExpiry(id, finalExpiry);
-      toast({ title: 'Updated!', description: 'License expiry date changed.' });
-      loadData(); // දත්ත Reload කිරීම
-    } catch (error) {
-      toast({ title: 'Error', description: 'Invalid date format', variant: 'destructive' });
     }
   };
 
@@ -89,112 +70,166 @@ export default function AdminLicenses({ onNavigate: _onNavigate }: AdminLicenses
     }
   };
 
+  // මෙය Admin ට කැමති දිනයක් හෝ Lifetime දීමට සකස් කළා
+  const handleExtend = async (id: string) => {
+    const input = prompt("Enter new Expiry Date (YYYY-MM-DD) or type 'lifetime' for 2099:");
+    if (!input) return;
+
+    let finalExpiry = "";
+    if (input.toLowerCase() === 'lifetime') {
+      finalExpiry = "2099-12-31 23:59:59";
+    } else {
+      finalExpiry = `${input} 23:59:59`;
+    }
+
+    try {
+      // මෙතනදී backend එකේ පුළුවන් updateExpiry කියන function එකක් හදන්න
+      await licenseService.updateExpiry(id, finalExpiry);
+      toast({ title: 'Success', description: 'License expiry updated' });
+      loadData();
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update expiry', variant: 'destructive' });
+    }
+  };
+
   const copyLicenseKey = (key: string) => {
     navigator.clipboard.writeText(key);
-    toast({ title: 'Copied!', description: 'Key copied to clipboard' });
+    toast({ title: 'Copied!', description: 'License key copied' });
   };
 
   const filteredLicenses = licenses.filter(
     (l) =>
       l.licenseKey.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (l.fullName || '').toLowerCase().includes(searchQuery.toLowerCase())
+      (l.fullName || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const stats = {
+    total: licenses.length,
+    active: licenses.filter((l) => l.status === 'active').length,
+    blocked: licenses.filter((l) => l.status === 'blocked').length,
+    expired: licenses.filter((l) => l.status === 'expired').length,
+  };
+
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">Manage Licenses</h2>
-        <button 
-          onClick={loadData} 
-          disabled={isLoading}
-          className="p-2 bg-white/5 rounded-lg hover:bg-white/10 text-[#A7ACB8]"
-        >
-          <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
+    <div className="min-h-screen pt-24 pb-16">
+      <div className="rv-container">
+        {/* Header with Refresh */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-[#F4F6FF]">License Management</h1>
+            <p className="text-[#A7ACB8] mt-1">Real-time database sync active</p>
+          </div>
+          <button 
+            onClick={loadData}
+            className={`p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-all ${isLoading ? 'animate-spin' : ''}`}
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+        </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A7ACB8]" />
-        <input
-          type="text"
-          placeholder="Search by key or user name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-[#1A1F2E] border border-white/10 rounded-lg text-white"
-        />
-      </div>
+        {/* Stats */}
+        <div className="grid sm:grid-cols-4 gap-4 mb-8">
+          <div className="rv-panel p-6">
+            <div className="text-3xl font-bold text-[#F4F6FF]">{stats.total}</div>
+            <div className="text-sm text-[#A7ACB8]">Total Licenses</div>
+          </div>
+          <div className="rv-panel p-6">
+            <div className="text- green-400 text-3xl font-bold">{stats.active}</div>
+            <div className="text-sm text-[#A7ACB8]">Active</div>
+          </div>
+          <div className="rv-panel p-6">
+            <div className="text-red-400 text-3xl font-bold">{stats.blocked}</div>
+            <div className="text-sm text-[#A7ACB8]">Blocked</div>
+          </div>
+          <div className="rv-panel p-6">
+            <div className="text-yellow-400 text-3xl font-bold">{stats.expired}</div>
+            <div className="text-sm text-[#A7ACB8]">Expired</div>
+          </div>
+        </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="text-left border-b border-white/5 text-[#A7ACB8]">
-              <th className="p-4">Software & User</th>
-              <th className="p-4">License Key</th>
-              <th className="p-4">Status</th>
-              <th className="p-4">Expiry Date</th>
-              <th className="p-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLicenses.map((license) => (
-              <tr key={license.id} className="border-b border-white/5 text-white hover:bg-white/5">
-                <td className="p-4">
-                  <div className="font-medium text-blue-400">
-                    {softwareMap[license.softwareId]?.name || 'Loading...'}
-                  </div>
-                  <div className="text-sm text-[#A7ACB8]">{license.fullName || 'User ID: ' + license.userId}</div>
-                </td>
-                <td className="p-4 font-mono text-sm">
-                  <div className="flex items-center gap-2">
-                    {license.licenseKey}
-                    <button onClick={() => copyLicenseKey(license.licenseKey)}>
-                      <Copy className="w-4 h-4 text-[#A7ACB8]" />
-                    </button>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    license.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                  }`}>
-                    {license.status.toUpperCase()}
-                  </span>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="w-4 h-4 text-orange-400" />
-                    {format(new Date(license.expiresAt), 'PPP')}
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleUpdateExpiry(license.id)}
-                      className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20"
-                      title="Update Expiry"
-                    >
-                      <Calendar className="w-4 h-4" />
-                    </button>
-                    {license.status === 'active' ? (
-                      <button 
-                        onClick={() => handleBlock(license.id)}
-                        className="p-2 bg-red-500/10 text-red-400 rounded-lg"
-                      >
-                        <Ban className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={() => handleUnblock(license.id)}
-                        className="p-2 bg-green-500/10 text-green-400 rounded-lg"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </td>
+        {/* Search */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A7ACB8]" />
+            <input
+              type="text"
+              placeholder="Search keys or client names..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="rv-input pl-12"
+            />
+          </div>
+        </div>
+
+        {/* Licenses Table */}
+        <div className="rv-panel overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[rgba(244,246,255,0.08)]">
+                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">License Key</th>
+                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Software</th>
+                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Client</th>
+                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Status</th>
+                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Activations</th>
+                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Expires</th>
+                <th className="text-left py-4 px-4 text-[#A7ACB8] font-medium">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredLicenses.map((license) => (
+                <tr key={license.id} className="border-b border-[rgba(244,246,255,0.05)] hover:bg-white/[0.02]">
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      <code className="text-[#4F46E5] mono font-bold">{license.licenseKey}</code>
+                      <button onClick={() => copyLicenseKey(license.licenseKey)} className="p-1 text-[#A7ACB8] hover:text-white">
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 text-[#F4F6FF]">
+                    {softwareMap[license.softwareId]?.name || 'Loading...'}
+                  </td>
+                  <td className="py-4 px-4 text-[#A7ACB8]">
+                    {license.fullName || 'User: ' + license.userId.slice(0, 8)}
+                  </td>
+                  <td className="py-4 px-4">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      license.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {license.status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4 text-[#A7ACB8]">
+                    {license.currentActivations} / {license.maxActivations}
+                  </td>
+                  <td className="py-4 px-4 text-[#A7ACB8]">
+                    {new Date(license.expiresAt).toLocaleDateString()}
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex gap-2">
+                      {license.status === 'active' ? (
+                        <button onClick={() => handleBlock(license.id)} className="p-2 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25">
+                          <Ban className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button onClick={() => handleUnblock(license.id)} className="p-2 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25">
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleExtend(license.id)}
+                        className="p-2 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/25"
+                        title="Change Expiry Date"
+                      >
+                        <Calendar className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
