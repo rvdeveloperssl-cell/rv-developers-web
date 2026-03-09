@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleLogin } from '@react-oauth/google'; // මෙහෙම වෙනස් කරන්න
 import { Shield, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, MessageSquare, Send } from 'lucide-react';
 
 
 interface SoftwareDetailProps {
@@ -47,6 +49,45 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  export default function SoftwareReviews({ softwareId }: { softwareId: string }) {
+  const { user } = useAuth(); // ලොග් වෙලා ඉන්න යූසර්ව මෙතනින් ගන්නවා
+  const [reviews, setReviews] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [rating, setRating] = useState(5);
+
+  // Reviews Load කිරීම
+  useEffect(() => {
+    fetchReviews();
+  }, [softwareId]);
+
+  const fetchReviews = async () => {
+    const res = await fetch(`http://localhost:8080/api/reviews/${softwareId}`);
+    const data = await res.json();
+    setReviews(data);
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return; // යූසර් නැත්නම් සේව් කරන්න දෙන්න එපා
+
+    const response = await fetch('http://localhost:8080/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        softwareId,
+        userId: user.id,
+        fullName: user.fullName, // ඔටෝමැටිකව යූසර්ගේ නම යනවා
+        rating,
+        comment: newComment
+      }),
+    });
+
+    if (response.ok) {
+      setNewComment('');
+      fetchReviews(); // අලුත් කමෙන්ට් එකත් එක්ක List එක update කරන්න
     }
   };
 
@@ -230,23 +271,39 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
     {/* ------------------------------------------ */}
 
               {/* Stats */}
-              <div className="mt-6 pt-6 border-t border-[rgba(244,246,255,0.08)] space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#A7ACB8]">Downloads</span>
-                  <span className="text-[#F4F6FF]">{software.downloadCount.toLocaleString()}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#A7ACB8]">Rating</span>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                    <span className="text-[#F4F6FF]">4.8</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#A7ACB8]">Version</span>
-                  <span className="text-[#F4F6FF]">{software.version}</span>
-                </div>
-              </div>
+<div className="mt-6 pt-6 border-t border-[rgba(244,246,255,0.08)] space-y-3">
+  
+  {/* Downloads */}
+  <div className="flex items-center justify-between text-sm">
+    <span className="text-[#A7ACB8]">Downloads</span>
+    <span className="text-[#F4F6FF]">{software.downloadCount.toLocaleString()}</span>
+  </div>
+
+  {/* Dynamic Rating */}
+  <div className="flex items-center justify-between text-sm">
+    <span className="text-[#A7ACB8]">Rating</span>
+    <div className="flex items-center gap-1">
+      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+      <span className="text-[#F4F6FF]">
+        {/* Rating එකක් නැත්නම් 'New' කියලා පෙන්වනවා, තියෙනවා නම් දශම එකකට හදලා පෙන්වනවා */}
+        {software.averageRating > 0 
+          ? Number(software.averageRating).toFixed(1) 
+          : 'New'}
+      </span>
+      {/* Review ගණනත් පොඩියට පෙන්වමු */}
+      {software.reviewCount > 0 && (
+        <span className="text-[10px] text-[#A7ACB8]">({software.reviewCount})</span>
+      )}
+    </div>
+  </div>
+
+  {/* Version */}
+  <div className="flex items-center justify-between text-sm">
+    <span className="text-[#A7ACB8]">Version</span>
+    <span className="text-[#F4F6FF]">{software.version}</span>
+  </div>
+
+</div>
             </div>
           </div>
         </div>
@@ -254,3 +311,58 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
     </div>
   );
 }
+
+return (
+    <div className=\"mt-12 space-y-8\">
+      <h3 className=\"text-2xl font-bold text-[#F4F6FF]\">Customer Reviews</h3>
+
+      {/* යූසර් ලොග් වෙලා ඉන්නවා නම් විතරක් Comment Box එක පෙන්වනවා */}
+      {user ? (
+        <form onSubmit={handleSubmitReview} className=\"rv-panel p-6 space-y-4\">
+          <p className=\"text-sm text-[#A7ACB8]\">Posting as <span className=\"text-[#4F46E5]\">{user.fullName}</span></p>
+          
+          <div className=\"flex gap-2\">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                className={`w-6 h-6 cursor-pointer ${rating >= star ? 'text-yellow-400 fill-yellow-400' : 'text-[#A7ACB8]'}`}
+                onClick={() => setRating(star)}
+              />
+            ))}
+          </div>
+
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            className=\"rv-input w-full min-h-[100px]\"
+            placeholder=\"Write your feedback...\"
+            required
+          />
+
+          <button type=\"submit\" className=\"rv-btn-primary flex items-center gap-2\">
+            Submit Review <Send className=\"w-4 h-4\" />
+          </button>
+        </form>
+      ) : (
+        <div className=\"p-6 border border-dashed border-[#A7ACB8]/20 rounded-xl text-center\">
+          <p className=\"text-[#A7ACB8]\">Please <span className=\"text-[#4F46E5] cursor-pointer underline\">sign in</span> to leave a review.</p>
+        </div>
+      )}
+
+      {/* Reviews පෙන්වන කොටස */}
+      <div className=\"space-y-4\">
+        {reviews.map((rev: any) => (
+          <div key={rev.id} className=\"p-4 bg-[#0B0E16]/50 rounded-lg border border-[rgba(244,246,255,0.05)]\">
+            <div className=\"flex justify-between mb-2\">
+              <span className=\"font-medium text-[#F4F6FF]\">{rev.fullName}</span>
+              <div className=\"flex gap-1 text-yellow-400\">
+                {Array(rev.rating).fill(0).map((_, i) => <Star key={i} className=\"w-3 h-3 fill-current\" />)}
+              </div>
+            </div>
+            <p className=\"text-[#A7ACB8] text-sm\">{rev.comment}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}  
