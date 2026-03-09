@@ -1,23 +1,119 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Download, ShoppingCart, Check, Star, Play, Monitor } from 'lucide-react';
+import { 
+  ArrowLeft, Download, ShoppingCart, Check, Star, 
+  Play, Monitor, Shield, Loader2, Send, MessageSquare 
+} from 'lucide-react';
 import { softwareService } from '@/services/mockSoftwareService';
 import type { Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useGoogleLogin } from '@react-oauth/google'; // මෙහෙම වෙනස් කරන්න
-import { Shield, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { Star, MessageSquare, Send } from 'lucide-react';
-
 
 interface SoftwareDetailProps {
   softwareId: string;
   onNavigate: (page: string, params?: Record<string, string>) => void;
 }
 
+// --- Reviews Component ---
+function SoftwareReviews({ softwareId }: { softwareId: string }) {
+  const { user } = useAuth();
+  const [reviews, setReviews] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [rating, setRating] = useState(5);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [softwareId]);
+
+  const fetchReviews = async () => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/reviews/${softwareId}`);
+      const data = await res.json();
+      setReviews(data);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    const response = await fetch('http://localhost:8080/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        softwareId,
+        userId: user.id,
+        fullName: user.fullName,
+        rating,
+        comment: newComment
+      }),
+    });
+
+    if (response.ok) {
+      setNewComment('');
+      fetchReviews();
+    }
+  };
+
+  return (
+    <div className="mt-12 space-y-8">
+      <h3 className="text-2xl font-bold text-[#F4F6FF]">Customer Reviews</h3>
+
+      {user ? (
+        <form onSubmit={handleSubmitReview} className="rv-panel p-6 space-y-4">
+          <p className="text-sm text-[#A7ACB8]">Posting as <span className="text-[#4F46E5]">{user.fullName}</span></p>
+          
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((starValue) => (
+              <Star
+                key={starValue}
+                className={`w-6 h-6 cursor-pointer ${rating >= starValue ? 'text-yellow-400 fill-yellow-400' : 'text-[#A7ACB8]'}`}
+                onClick={() => setRating(starValue)}
+              />
+            ))}
+          </div>
+
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            className="rv-input w-full min-h-[100px]"
+            placeholder="Write your feedback..."
+            required
+          />
+
+          <button type="submit" className="rv-btn-primary flex items-center gap-2">
+            Submit Review <Send className="w-4 h-4" />
+          </button>
+        </form>
+      ) : (
+        <div className="p-6 border border-dashed border-[#A7ACB8]/20 rounded-xl text-center">
+          <p className="text-[#A7ACB8]">Please <span className="text-[#4F46E5] cursor-pointer underline">sign in</span> to leave a review.</p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {reviews.map((rev: any) => (
+          <div key={rev.id} className="p-4 bg-[#0B0E16]/50 rounded-lg border border-[rgba(244,246,255,0.05)]">
+            <div className="flex justify-between mb-2">
+              <span className="font-medium text-[#F4F6FF]">{rev.fullName}</span>
+              <div className="flex gap-1 text-yellow-400">
+                {Array(rev.rating).fill(0).map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}
+              </div>
+            </div>
+            <p className="text-[#A7ACB8] text-sm">{rev.comment}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Main Component ---
 export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetailProps) {
-  const [software, setSoftware] = useState<Software | null>(null);
+  const [software, setSoftware] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSettingUp, setIsSettingUp] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
 
@@ -34,84 +130,28 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
       if (data) {
         setSoftware(data);
       } else {
-        toast({
-          title: 'Error',
-          description: 'Software not found',
-          variant: 'destructive',
-        });
+        toast({ title: 'Error', description: 'Software not found', variant: 'destructive' });
         onNavigate('software');
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load software details',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to load software details', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  export default function SoftwareReviews({ softwareId }: { softwareId: string }) {
-  const { user } = useAuth(); // ලොග් වෙලා ඉන්න යූසර්ව මෙතනින් ගන්නවා
-  const [reviews, setReviews] = useState([]);
-  const [newComment, setNewComment] = useState('');
-  const [rating, setRating] = useState(5);
-
-  // Reviews Load කිරීම
-  useEffect(() => {
-    fetchReviews();
-  }, [softwareId]);
-
-  const fetchReviews = async () => {
-    const res = await fetch(`http://localhost:8080/api/reviews/${softwareId}`);
-    const data = await res.json();
-    setReviews(data);
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return; // යූසර් නැත්නම් සේව් කරන්න දෙන්න එපා
-
-    const response = await fetch('http://localhost:8080/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        softwareId,
-        userId: user.id,
-        fullName: user.fullName, // ඔටෝමැටිකව යූසර්ගේ නම යනවා
-        rating,
-        comment: newComment
-      }),
-    });
-
-    if (response.ok) {
-      setNewComment('');
-      fetchReviews(); // අලුත් කමෙන්ට් එකත් එක්ක List එක update කරන්න
-    }
-  };
-
   const handleDownload = () => {
     if (!isAuthenticated) {
-      toast({
-        title: 'Login Required',
-        description: 'Please sign in to download software.',
-      });
+      toast({ title: 'Login Required', description: 'Please sign in to download software.' });
       onNavigate('login');
       return;
     }
-    toast({
-      title: 'Download Started',
-      description: `${software?.name} is being downloaded.`,
-    });
+    toast({ title: 'Download Started', description: `${software?.name} is being downloaded.` });
   };
 
   const handlePurchase = () => {
     if (!isAuthenticated) {
-      toast({
-        title: 'Login Required',
-        description: 'Please sign in to purchase software.',
-      });
+      toast({ title: 'Login Required', description: 'Please sign in to purchase software.' });
       onNavigate('login');
       return;
     }
@@ -120,16 +160,8 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
 
   if (isLoading) {
     return (
-      <div className="min-h-screen pt-24 pb-16 rv-container">
-        <div className="animate-pulse space-y-8">
-          <div className="h-8 bg-[rgba(244,246,255,0.05)] rounded w-1/4" />
-          <div className="aspect-video bg-[rgba(244,246,255,0.05)] rounded-xl" />
-          <div className="space-y-4">
-            <div className="h-6 bg-[rgba(244,246,255,0.05)] rounded w-3/4" />
-            <div className="h-4 bg-[rgba(244,246,255,0.05)] rounded" />
-            <div className="h-4 bg-[rgba(244,246,255,0.05)] rounded w-1/2" />
-          </div>
-        </div>
+      <div className="min-h-screen pt-24 pb-16 rv-container text-center">
+        <Loader2 className="w-10 h-10 animate-spin mx-auto text-[#4F46E5]" />
       </div>
     );
   }
@@ -139,7 +171,6 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="rv-container">
-        {/* Back Button */}
         <button
           onClick={() => onNavigate('software')}
           className="flex items-center gap-2 text-[#A7ACB8] hover:text-[#F4F6FF] transition-colors mb-6"
@@ -149,18 +180,10 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
         </button>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Hero Image */}
             <div className="relative aspect-video rounded-2xl overflow-hidden">
-              <img
-                src={software.imageUrl}
-                alt={software.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={software.imageUrl} alt={software.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] via-transparent to-transparent" />
-              
-              {/* Demo Video Button */}
               {software.demoVideoUrl && (
                 <button className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-[#4F46E5] flex items-center justify-center hover:scale-110 transition-transform">
                   <Play className="w-6 h-6 text-white ml-1" />
@@ -168,25 +191,21 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
               )}
             </div>
 
-            {/* Title Section */}
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <span className="rv-badge">{software.category}</span>
                 <span className="text-sm text-[#A7ACB8]">v{software.version}</span>
               </div>
-              <h1 className="text-3xl lg:text-4xl font-bold text-[#F4F6FF] mb-4">
-                {software.name}
-              </h1>
+              <h1 className="text-3xl lg:text-4xl font-bold text-[#F4F6FF] mb-4">{software.name}</h1>
               <p className="text-lg text-[#A7ACB8]">{software.description}</p>
             </div>
 
-            {/* Features */}
             <div className="rv-panel p-6">
               <h2 className="text-xl font-semibold text-[#F4F6FF] mb-4">Key Features</h2>
               <div className="grid sm:grid-cols-2 gap-3">
-                {software.features.map((feature) => (
+                {software.features.map((feature: string) => (
                   <div key={feature} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-[rgba(79,70,229,0.2)] flex items-center justify-center flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-[rgba(79,70,229,0.2)] flex items-center justify-center">
                       <Check className="w-3 h-3 text-[#4F46E5]" />
                     </div>
                     <span className="text-[#A7ACB8]">{feature}</span>
@@ -195,7 +214,6 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
               </div>
             </div>
 
-            {/* System Requirements */}
             <div className="rv-panel p-6">
               <h2 className="text-xl font-semibold text-[#F4F6FF] mb-4">System Requirements</h2>
               <div className="flex items-start gap-3">
@@ -203,11 +221,12 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                 <p className="text-[#A7ACB8]">{software.systemRequirements}</p>
               </div>
             </div>
+
+            {/* Reviews Section */}
+            <SoftwareReviews softwareId={softwareId} />
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Price Card */}
             <div className="rv-panel p-6 sticky top-24">
               <div className="text-center mb-6">
                 {software.isFree ? (
@@ -217,93 +236,56 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                   </>
                 ) : (
                   <>
-                    <span className="text-4xl font-bold text-[#F4F6FF]">
-                      LKR {software.price.toLocaleString()}
-                    </span>
+                    <span className="text-4xl font-bold text-[#F4F6FF]">LKR {software.price?.toLocaleString()}</span>
                     <p className="text-sm text-[#A7ACB8] mt-2">One-time purchase</p>
                   </>
                 )}
               </div>
 
               {software.isFree ? (
-                <button
-                  onClick={handleDownload}
-                  className="rv-btn-primary w-full flex items-center justify-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Now
+                <button onClick={handleDownload} className="rv-btn-primary w-full flex items-center justify-center gap-2">
+                  <Download className="w-4 h-4" /> Download Now
                 </button>
               ) : (
-                <button
-                  onClick={handlePurchase}
-                  className="rv-btn-primary w-full flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Buy Now
+                <button onClick={handlePurchase} className="rv-btn-primary w-full flex items-center justify-center gap-2">
+                  <ShoppingCart className="w-4 h-4" /> Buy Now
                 </button>
               )}
 
-              
-{isAuthenticated && software.requiresFirebase && (
-  <div className="mt-4 pt-4 border-t border-[rgba(244,246,255,0.08)]">
-    <p className="text-[10px] text-[#A7ACB8] uppercase tracking-wider mb-3 text-center font-bold">
-      Required Database Setup
-    </p>
-    
-    <button
-      onClick={() => login()} // මෙන්න මෙතනින් තමයි අර popup එක එන්නේ
-      disabled={isSettingUp}
-      className="rv-btn-secondary w-full flex items-center justify-center gap-2 border-[#4F46E5] text-[#F4F6FF] hover:bg-[#4F46E5]/10 py-2.5 rounded-lg transition-all"
-    >
-      {isSettingUp ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <Shield className="w-4 h-4 text-[#4F46E5]" />
-      )}
-      {isSettingUp ? 'Connecting...' : 'Setup Private Firebase'}
-    </button>
+              {isAuthenticated && software.requiresFirebase && (
+                <div className="mt-4 pt-4 border-t border-[rgba(244,246,255,0.08)]">
+                  <p className="text-[10px] text-[#A7ACB8] uppercase tracking-wider mb-3 text-center font-bold">Required Database Setup</p>
+                  <button
+                    onClick={() => {}} 
+                    disabled={isSettingUp}
+                    className="rv-btn-secondary w-full flex items-center justify-center gap-2 border-[#4F46E5] text-[#F4F6FF] hover:bg-[#4F46E5]/10 py-2.5 rounded-lg transition-all"
+                  >
+                    {isSettingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4 text-[#4F46E5]" />}
+                    {isSettingUp ? 'Connecting...' : 'Setup Private Firebase'}
+                  </button>
+                </div>
+              )}
 
-    <p className="text-[11px] text-[#A7ACB8] mt-3 text-center leading-relaxed px-2">
-      Link your Google account to create a secure, private database for this software.
-    </p>
-  </div>
-)}
-    {/* ------------------------------------------ */}
-
-              {/* Stats */}
-<div className="mt-6 pt-6 border-t border-[rgba(244,246,255,0.08)] space-y-3">
-  
-  {/* Downloads */}
-  <div className="flex items-center justify-between text-sm">
-    <span className="text-[#A7ACB8]">Downloads</span>
-    <span className="text-[#F4F6FF]">{software.downloadCount.toLocaleString()}</span>
-  </div>
-
-  {/* Dynamic Rating */}
-  <div className="flex items-center justify-between text-sm">
-    <span className="text-[#A7ACB8]">Rating</span>
-    <div className="flex items-center gap-1">
-      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-      <span className="text-[#F4F6FF]">
-        {/* Rating එකක් නැත්නම් 'New' කියලා පෙන්වනවා, තියෙනවා නම් දශම එකකට හදලා පෙන්වනවා */}
-        {software.averageRating > 0 
-          ? Number(software.averageRating).toFixed(1) 
-          : 'New'}
-      </span>
-      {/* Review ගණනත් පොඩියට පෙන්වමු */}
-      {software.reviewCount > 0 && (
-        <span className="text-[10px] text-[#A7ACB8]">({software.reviewCount})</span>
-      )}
-    </div>
-  </div>
-
-  {/* Version */}
-  <div className="flex items-center justify-between text-sm">
-    <span className="text-[#A7ACB8]">Version</span>
-    <span className="text-[#F4F6FF]">{software.version}</span>
-  </div>
-
-</div>
+              <div className="mt-6 pt-6 border-t border-[rgba(244,246,255,0.08)] space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#A7ACB8]">Downloads</span>
+                  <span className="text-[#F4F6FF]">{software.downloadCount?.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#A7ACB8]">Rating</span>
+                  <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                    <span className="text-[#F4F6FF]">
+                      {software.averageRating > 0 ? Number(software.averageRating).toFixed(1) : 'New'}
+                    </span>
+                    {software.reviewCount > 0 && <span className="text-[10px] text-[#A7ACB8]">({software.reviewCount})</span>}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#A7ACB8]">Version</span>
+                  <span className="text-[#F4F6FF]">{software.version}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -311,58 +293,3 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
     </div>
   );
 }
-
-return (
-    <div className=\"mt-12 space-y-8\">
-      <h3 className=\"text-2xl font-bold text-[#F4F6FF]\">Customer Reviews</h3>
-
-      {/* යූසර් ලොග් වෙලා ඉන්නවා නම් විතරක් Comment Box එක පෙන්වනවා */}
-      {user ? (
-        <form onSubmit={handleSubmitReview} className=\"rv-panel p-6 space-y-4\">
-          <p className=\"text-sm text-[#A7ACB8]\">Posting as <span className=\"text-[#4F46E5]\">{user.fullName}</span></p>
-          
-          <div className=\"flex gap-2\">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                className={`w-6 h-6 cursor-pointer ${rating >= star ? 'text-yellow-400 fill-yellow-400' : 'text-[#A7ACB8]'}`}
-                onClick={() => setRating(star)}
-              />
-            ))}
-          </div>
-
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            className=\"rv-input w-full min-h-[100px]\"
-            placeholder=\"Write your feedback...\"
-            required
-          />
-
-          <button type=\"submit\" className=\"rv-btn-primary flex items-center gap-2\">
-            Submit Review <Send className=\"w-4 h-4\" />
-          </button>
-        </form>
-      ) : (
-        <div className=\"p-6 border border-dashed border-[#A7ACB8]/20 rounded-xl text-center\">
-          <p className=\"text-[#A7ACB8]\">Please <span className=\"text-[#4F46E5] cursor-pointer underline\">sign in</span> to leave a review.</p>
-        </div>
-      )}
-
-      {/* Reviews පෙන්වන කොටස */}
-      <div className=\"space-y-4\">
-        {reviews.map((rev: any) => (
-          <div key={rev.id} className=\"p-4 bg-[#0B0E16]/50 rounded-lg border border-[rgba(244,246,255,0.05)]\">
-            <div className=\"flex justify-between mb-2\">
-              <span className=\"font-medium text-[#F4F6FF]\">{rev.fullName}</span>
-              <div className=\"flex gap-1 text-yellow-400\">
-                {Array(rev.rating).fill(0).map((_, i) => <Star key={i} className=\"w-3 h-3 fill-current\" />)}
-              </div>
-            </div>
-            <p className=\"text-[#A7ACB8] text-sm\">{rev.comment}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}  
