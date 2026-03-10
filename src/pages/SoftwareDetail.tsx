@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { 
   ArrowLeft, Download, ShoppingCart, Check, Star, 
   Play, Monitor, Shield, Loader2, Send, MessageSquare 
@@ -15,14 +15,33 @@ interface SoftwareDetailProps {
 
 // --- Reviews Component ---
 function SoftwareReviews({ softwareId }: { softwareId: string }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [rating, setRating] = useState(5);
+  
+  // Reply සඳහා අවශ්‍ය State
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   useEffect(() => {
     fetchReviews();
   }, [softwareId]);
+
+  // Admin Dashboard එකෙන් එන scroll focus එක handle කිරීම
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const focusId = params.get('focusComment');
+    if (focusId) {
+      setTimeout(() => {
+        const el = document.getElementById(`review-${focusId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-[#4F46E5]', 'ring-offset-2', 'ring-offset-[#0B0E16]');
+        }
+      }, 1000);
+    }
+  }, [reviews]);
 
   const fetchReviews = async () => {
     try {
@@ -53,6 +72,29 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
     if (response.ok) {
       setNewComment('');
       fetchReviews();
+    }
+  };
+
+  // Admin Reply එක Submit කරන Function එක
+  const handleReplySubmit = async (reviewId: number) => {
+    if (!replyText.trim()) return;
+
+    try {
+      const response = await fetch(`https://api.rvdevelopers.lk/api/reviews/reply/${reviewId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          replyText: replyText,
+        }),
+      });
+
+      if (response.ok) {
+        setReplyText('');
+        setReplyingTo(null);
+        fetchReviews();
+      }
+    } catch (error) {
+      console.error("Reply error:", error);
     }
   };
 
@@ -94,14 +136,59 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
 
       <div className="space-y-4">
         {reviews.map((rev: any) => (
-          <div key={rev.id} className="p-4 bg-[#0B0E16]/50 rounded-lg border border-[rgba(244,246,255,0.05)]">
-            <div className="flex justify-between mb-2">
-              <span className="font-medium text-[#F4F6FF]">{rev.fullName}</span>
-              <div className="flex gap-1 text-yellow-400">
-                {Array(rev.rating).fill(0).map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}
+          <div key={rev.id} id={`review-${rev.id}`} className="transition-all duration-500 rounded-lg overflow-hidden">
+            <div className="p-4 bg-[#0B0E16]/50 rounded-lg border border-[rgba(244,246,255,0.05)]">
+              <div className="flex justify-between mb-2">
+                <span className="font-medium text-[#F4F6FF]">{rev.fullName}</span>
+                <div className="flex gap-1 text-yellow-400">
+                  {Array(rev.rating).fill(0).map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}
+                </div>
               </div>
+              <p className="text-[#A7ACB8] text-sm">{rev.comment}</p>
+              
+              {/* Admin Reply පෙන්වන කොටස */}
+              {rev.reply_text && (
+                <div className="mt-4 ml-6 p-3 bg-[#4F46E5]/10 border-l-2 border-[#4F46E5] rounded-r-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-5 h-5 rounded-full bg-[#4F46E5] flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-xs font-bold text-[#F4F6FF] uppercase tracking-wider">Developer Response</span>
+                  </div>
+                  <p className="text-[#A7ACB8] text-sm italic">"{rev.reply_text}"</p>
+                </div>
+              )}
+
+              {/* Admin ට විතරක් පේන Reply Button එක */}
+              {isAdmin && !rev.reply_text && (
+                <button 
+                  onClick={() => setReplyingTo(replyingTo === rev.id ? null : rev.id)}
+                  className="mt-3 flex items-center gap-1 text-xs text-[#4F46E5] hover:text-[#F4F6FF] transition-colors"
+                >
+                  <MessageSquare className="w-3 h-3" /> {replyingTo === rev.id ? 'Cancel Reply' : 'Reply to Client'}
+                </button>
+              )}
+
+              {/* Admin Reply Input Box */}
+              {replyingTo === rev.id && (
+                <div className="mt-3 flex gap-2">
+                  <input 
+                    type="text"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    className="rv-input py-1.5 text-sm flex-1"
+                    placeholder="Type your reply..."
+                    autoFocus
+                  />
+                  <button 
+                    onClick={() => handleReplySubmit(rev.id)}
+                    className="rv-btn-primary px-3 py-1.5 text-xs"
+                  >
+                    Send
+                  </button>
+                </div>
+              )}
             </div>
-            <p className="text-[#A7ACB8] text-sm">{rev.comment}</p>
           </div>
         ))}
       </div>
@@ -130,14 +217,11 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
     if (res.ok) {
       const data = await res.json();
 
-      // features හසුරුවන නිවැරදි ක්‍රමය:
       if (data && data.features) {
         try {
-          // 1. මුලින්ම බලනවා ඒක JSON string එකක්ද කියලා (e.g. '["a", "b"]')
           if (typeof data.features === 'string' && data.features.startsWith('[')) {
             data.features = JSON.parse(data.features);
           } 
-          // 2. නැත්නම් ඒක සාමාන්‍ය කමාවෙන් වෙන් කරපු string එකක්ද කියලා බලනවා (e.g. "a, b")
           else if (typeof data.features === 'string') {
             data.features = data.features.split(',').map((f: string) => f.trim());
           }
