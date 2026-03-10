@@ -123,21 +123,25 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
   }, [softwareId]);
 
   const loadSoftware = async () => {
-    setIsLoading(true);
-    try {
-      const data = await softwareService.getSoftwareById(softwareId);
-      if (data) {
-        setSoftware(data);
-      } else {
-        toast({ title: 'Error', description: 'Software not found', variant: 'destructive' });
-        onNavigate('software');
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to load software details', variant: 'destructive' });
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  try {
+    // mockService එක වෙනුවට කෙලින්ම ඔයාගේ API එකට fetch කරන්න
+    const res = await fetch(`https://api.rvdevelopers.lk/api/software/${softwareId}`);
+    
+    if (res.ok) {
+      const data = await res.json();
+      setSoftware(data); // දැන් මෙතනට Backend එකේ SQL එකෙන් එන averageRating, reviewCount ටික ලැබෙනවා
+    } else {
+      toast({ title: 'Error', description: 'Software not found', variant: 'destructive' });
+      onNavigate('software');
     }
-  };
+  } catch (error) {
+    console.error("Load Error:", error);
+    toast({ title: 'Error', description: 'Failed to load software details', variant: 'destructive' });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleDownload = () => {
     if (!isAuthenticated) {
