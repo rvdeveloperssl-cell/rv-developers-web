@@ -8,6 +8,8 @@ import {
   Activity,
   AlertCircle,
   ArrowRight,
+  MessageSquare, // අලුතින් එකතු කළා
+  Star
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { softwareService } from '@/services/mockSoftwareService';
@@ -34,6 +36,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [pendingPayments, setPendingPayments] = useState<Purchase[]>([]);
+  const [pendingReviews, setPendingReviews] = useState<any[]>([]); // අලුත් Reviews සඳහා
   const [isLoading, setIsLoading] = useState(true);
 
   // API URL එක Clean කරගැනීම
@@ -63,16 +66,16 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         return Array.isArray(data) ? data : [];
       };
 
-      // මෙතනට '/api/admin/activities/recent' එකතු කළා
-      const [software, purchases, pending, clients, activities] = await Promise.all([
+      // අලුතින් '/api/admin/reviews/pending' එකතු කළා (Reply කරපු නැති ඒවා ගන්න)
+      const [software, purchases, pending, clients, activities, reviews] = await Promise.all([
         fetchSafe('/api/software/all'),
         fetchSafe('/api/admin/purchases/all'),
         fetchSafe('/api/admin/payments/pending'),
         fetchSafe('/api/admin/clients'),
-        fetchSafe('/api/admin/activities/recent'), // අලුත් API එක
+        fetchSafe('/api/admin/activities/recent'),
+        fetchSafe('/api/admin/reviews/pending'), // අලුත් API එක
       ]);
 
-      // Stats ගණනය කිරීම (කලින් තිබූ විදිහටම)
       const verifiedPurchases = purchases.filter((p: any) => p.paymentStatus === 'verified');
       const totalRevenue = verifiedPurchases.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
       
@@ -86,11 +89,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       });
 
       setPendingPayments(pending.slice(0, 5));
-      setRecentActivity(activities); // මෙතනින් Activity ටික state එකට දානවා
+      setRecentActivity(activities);
+      setPendingReviews(reviews.slice(0, 5)); // අලුත් reviews 5ක් පෙන්වන්න
       
     } catch (error) {
       console.error("Dashboard Load Error:", error);
-      // toast error message...
     } finally {
       setIsLoading(false);
     }
@@ -138,14 +141,24 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <h1 className="text-3xl font-bold text-[#F4F6FF]">Admin Dashboard</h1>
             <p className="text-[#A7ACB8] mt-1">Manage your software business</p>
           </div>
-          {stats.pendingPayments > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-              <AlertCircle className="w-5 h-5 text-yellow-400" />
-              <span className="text-sm text-yellow-400">
-                {stats.pendingPayments} pending payments
-              </span>
-            </div>
-          )}
+          <div className="flex gap-3">
+            {pendingReviews.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#4F46E5]/10 border border-[#4F46E5]/20">
+                <MessageSquare className="w-5 h-5 text-[#4F46E5]" />
+                <span className="text-sm text-[#4F46E5]">
+                  {pendingReviews.length} new reviews
+                </span>
+              </div>
+            )}
+            {stats.pendingPayments > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                <AlertCircle className="w-5 h-5 text-yellow-400" />
+                <span className="text-sm text-yellow-400">
+                  {stats.pendingPayments} pending payments
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -166,7 +179,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Pending Payments */}
+          {/* Pending Payments (පරණ විදිහටම) */}
           <div className="rv-panel p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-[#F4F6FF]">Pending Payments</h2>
@@ -208,14 +221,52 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             )}
           </div>
 
-          {/* Recent Activity */}
+          {/* New Reviews Section (අලුතින් එකතු කළ කොටස) */}
           <div className="rv-panel p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-[#F4F6FF]">New Customer Reviews</h2>
+              <MessageSquare className="w-5 h-5 text-[#4F46E5]" />
+            </div>
+
+            {pendingReviews.length === 0 ? (
+              <div className="text-center py-8">
+                <Star className="w-12 h-12 text-[#A7ACB8] mx-auto mb-4" />
+                <p className="text-[#A7ACB8]">No new reviews to reply</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pendingReviews.map((rev) => (
+                  <div
+                    key={rev.id}
+                    className="p-4 rounded-lg bg-[#4F46E5]/5 border border-[#4F46E5]/10 flex flex-col gap-2"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-xs font-bold text-[#4F46E5] block uppercase tracking-wider">{rev.softwareName}</span>
+                        <span className="text-[#F4F6FF] text-sm font-medium">{rev.fullName}</span>
+                      </div>
+                      <button 
+                        onClick={() => onNavigate('software-detail', { id: rev.softwareId, focusComment: rev.id })}
+                        className="text-[10px] bg-[#4F46E5] text-white px-2 py-1 rounded hover:bg-[#4338ca] transition-colors"
+                      >
+                        REPLY NOW
+                      </button>
+                    </div>
+                    <p className="text-xs text-[#A7ACB8] line-clamp-1 italic">"{rev.comment}"</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Activity (පරණ විදිහටම පහළට ගත්තා) */}
+          <div className="rv-panel p-6 lg:col-span-2">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-[#F4F6FF]">Recent Activity</h2>
               <Activity className="w-5 h-5 text-[#A7ACB8]" />
             </div>
 
-            <div className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               {recentActivity.map((activity) => (
                 <div
                   key={activity.id}
@@ -225,9 +276,9 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                     <TrendingUp className="w-4 h-4 text-[#4F46E5]" />
                   </div>
                   <div>
-                    <div className="text-[#F4F6FF] font-medium">{activity.action}</div>
-                    <div className="text-sm text-[#A7ACB8]">{activity.details}</div>
-                    <div className="text-xs text-[#A7ACB8] mt-1">
+                    <div className="text-[#F4F6FF] font-medium text-sm">{activity.action}</div>
+                    <div className="text-xs text-[#A7ACB8]">{activity.details}</div>
+                    <div className="text-[10px] text-[#A7ACB8] mt-1 uppercase">
                       {new Date(activity.createdAt).toLocaleString()}
                     </div>
                   </div>
@@ -237,7 +288,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions (පරණ විදිහටම) */}
         <div className="mt-8 rv-panel p-6">
           <h2 className="text-lg font-semibold text-[#F4F6FF] mb-4">Quick Actions</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
