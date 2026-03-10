@@ -23,17 +23,42 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
   const loadData = async () => {
   setIsLoading(true);
   try {
-    // 1. Software ටික විතරක් Fetch කරනවා
     const res = await fetch('https://api.rvdevelopers.lk/api/software/all');
     
-    // Response එක JSON ද කියලා බලනවා
     if (!res.ok) throw new Error('Network response was not ok');
     
-    const softwareData = await res.json();
+    let softwareData = await res.json();
+
+    // --- මෙන්න මෙතන තමයි Features ටික හදන කෑල්ල ---
+    softwareData = softwareData.map((s: any) => {
+      let parsedFeatures = [];
+      
+      if (s.features) {
+        try {
+          // 1. බලනවා ඒක ["a", "b"] වගේ JSON string එකක්ද කියලා
+          if (typeof s.features === 'string' && s.features.startsWith('[')) {
+            parsedFeatures = JSON.parse(s.features);
+          } 
+          // 2. නැත්නම් ඒක "a, b, c" වගේ comma separated string එකක්ද කියලා බලනවා
+          else if (typeof s.features === 'string') {
+            parsedFeatures = s.features.split(',').map((f: string) => f.trim());
+          }
+          // 3. දැනටමත් array එකක් නම් ඒකම ගන්නවා
+          else if (Array.isArray(s.features)) {
+            parsedFeatures = s.features;
+          }
+        } catch (e) {
+          console.error("Feature parsing error for:", s.name, e);
+          parsedFeatures = [];
+        }
+      }
+      
+      return { ...s, features: parsedFeatures };
+    });
+
     setSoftware(softwareData);
 
-    // 2. Categories ටික API එකෙන් ගන්නේ නැතුව, Software list එකෙන් හදාගන්නවා
-    // එතකොට 404 error එක එන්නේ නැහැ.
+    // Categories ටික extract කරගන්නා හැටි
     const uniqueCategories = [
       { id: 'all', name: 'All Categories' },
       ...Array.from(new Set(softwareData.map((s: any) => s.category)))
@@ -41,7 +66,6 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
         .map((cat, index) => ({ id: index.toString(), name: cat }))
     ];
     
-    // Categories ටික set කරනවා (All Categories එක ඇරෙන්න අනිත්වා)
     setCategories(uniqueCategories.filter(c => c.name !== 'All Categories'));
 
   } catch (error) {
@@ -55,7 +79,6 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
     setIsLoading(false);
   }
 };
-
   const filteredSoftware = software.filter((s) => {
     const matchesCategory = selectedCategory === 'all' || s.category === selectedCategory;
     const matchesSearch =
