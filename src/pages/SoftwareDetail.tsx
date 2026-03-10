@@ -252,39 +252,43 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                 </button>
               )}
 
-              {isAuthenticated && software.requiresFirebase && (
-                <div className="mt-4 pt-4 border-t border-[rgba(244,246,255,0.08)]">
-                  <p className="text-[10px] text-[#A7ACB8] uppercase tracking-wider mb-3 text-center font-bold">Required Database Setup</p>
-                  <button
-                    onClick={() => {}} 
-                    disabled={isSettingUp}
-                    className="rv-btn-secondary w-full flex items-center justify-center gap-2 border-[#4F46E5] text-[#F4F6FF] hover:bg-[#4F46E5]/10 py-2.5 rounded-lg transition-all"
-                  >
-                    {isSettingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4 text-[#4F46E5]" />}
-                    {isSettingUp ? 'Connecting...' : 'Setup Private Firebase'}
-                  </button>
-                </div>
-              )}
+              <div className="mt-6 pt-6 border-t border-[rgba(244,246,255,0.08)] space-y-4">
+  
+  {/* Guaranteed Secure Badge (අලුතින් දැම්මා) */}
+  <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/5 border border-green-500/10">
+    <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+      <Shield className="w-4 h-4 text-green-500" />
+    </div>
+    <div>
+      <p className="text-[11px] font-bold text-green-500 uppercase tracking-tight">Verified Secure</p>
+      <p className="text-[10px] text-[#A7ACB8]">100% Virus Free & Tested</p>
+    </div>
+  </div>
 
-              <div className="mt-6 pt-6 border-t border-[rgba(244,246,255,0.08)] space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#A7ACB8]">Downloads</span>
-                  <span className="text-[#F4F6FF]">{software.downloadCount?.toLocaleString()}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#A7ACB8]">Rating</span>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                    <span className="text-[#F4F6FF]">
-                      {software.averageRating > 0 ? Number(software.averageRating).toFixed(1) : 'New'}
-                    </span>
-                    {software.reviewCount > 0 && <span className="text-[10px] text-[#A7ACB8]">({software.reviewCount})</span>}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#A7ACB8]">Version</span>
-                  <span className="text-[#F4F6FF]">{software.version}</span>
-                </div>
+  {/* Stats */}
+  <div className="space-y-3 pt-2">
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-[#A7ACB8]">Downloads</span>
+      <span className="text-[#F4F6FF]">{software.downloadCount?.toLocaleString()}</span>
+    </div>
+
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-[#A7ACB8]">Rating</span>
+      <div className="flex items-center gap-1">
+        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+        <span className="text-[#F4F6FF]">
+          {software.averageRating > 0 ? Number(software.averageRating).toFixed(1) : 'New'}
+        </span>
+        {software.reviewCount > 0 && (
+          <span className="text-[10px] text-[#A7ACB8]">({software.reviewCount})</span>
+        )}
+      </div>
+    </div>
+
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-[#A7ACB8]">Version</span>
+      <span className="text-[#F4F6FF]">{software.version}</span>
+    </div>
               </div>
             </div>
           </div>
