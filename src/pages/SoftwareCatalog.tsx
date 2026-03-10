@@ -21,30 +21,39 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
   }, []);
 
   const loadData = async () => {
-    setIsLoading(true);
-    try {
-        // Direct Fetch එකක් පාවිච්චි කරන්න Service එක හරහා එන දත්ත වල ප්‍රශ්නයක් තිබේ නම්
-        const res = await fetch('https://api.rvdevelopers.lk/api/software/all');
-        const softwareData = await res.json();
-        
-        // Categories සඳහා වෙනම fetch එකක් (getCategories එක වැඩ නම් ඒක තියාගන්න)
-        const categoriesRes = await fetch('https://api.rvdevelopers.lk/api/categories'); // ඔයාගේ categories API එකේ නම
-        const categoriesData = await categoriesRes.json();
-        
-        // දත්ත process කිරීම (පරණ code එකේ තිබුණ s.averageRating logic එක මෙතනට වැදගත්)
-        setSoftware(softwareData);
-        setCategories(categoriesData);
-        
-    } catch (error) {
-        console.error("Fetch error:", error);
-        toast({
-            title: 'Connection Error',
-            description: 'Failed to fetch software catalog.',
-            variant: 'destructive',
-        });
-    } finally {
-        setIsLoading(false);
-    }
+  setIsLoading(true);
+  try {
+    // 1. Software ටික විතරක් Fetch කරනවා
+    const res = await fetch('https://api.rvdevelopers.lk/api/software/all');
+    
+    // Response එක JSON ද කියලා බලනවා
+    if (!res.ok) throw new Error('Network response was not ok');
+    
+    const softwareData = await res.json();
+    setSoftware(softwareData);
+
+    // 2. Categories ටික API එකෙන් ගන්නේ නැතුව, Software list එකෙන් හදාගන්නවා
+    // එතකොට 404 error එක එන්නේ නැහැ.
+    const uniqueCategories = [
+      { id: 'all', name: 'All Categories' },
+      ...Array.from(new Set(softwareData.map((s: any) => s.category)))
+        .filter(Boolean)
+        .map((cat, index) => ({ id: index.toString(), name: cat }))
+    ];
+    
+    // Categories ටික set කරනවා (All Categories එක ඇරෙන්න අනිත්වා)
+    setCategories(uniqueCategories.filter(c => c.name !== 'All Categories'));
+
+  } catch (error) {
+    console.error("Fetch error:", error);
+    toast({
+      title: 'Connection Error',
+      description: 'Could not connect to the server.',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsLoading(false);
+  }
 };
 
   const filteredSoftware = software.filter((s) => {
