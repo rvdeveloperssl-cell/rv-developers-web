@@ -26,7 +26,7 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/reviews/${softwareId}`);
+      const res = await fetch(`https://api.rvdevelopers.lk/api/reviews/${softwareId}`);
       const data = await res.json();
       setReviews(data);
     } catch (error) {
@@ -38,7 +38,7 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
     e.preventDefault();
     if (!user) return;
 
-    const response = await fetch('http://localhost:8080/api/reviews', {
+    const response = await fetch('https://api.rvdevelopers.lk/api/reviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
