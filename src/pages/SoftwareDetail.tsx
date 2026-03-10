@@ -130,12 +130,23 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
     if (res.ok) {
       const data = await res.json();
 
-      // මෙන්න මේ කෑල්ල අලුතෙන් එකතු කරන්න:
-      // features එක string එකක් නම් ඒක කමාවෙන් (,) වෙන් කරලා array එකක් කරගන්නවා
-      if (data && typeof data.features === 'string') {
-        data.features = data.features.split(',').map((f: string) => f.trim());
-      } else if (!data.features) {
-        data.features = []; // මොකුත්ම නැත්නම් හිස් array එකක් දානවා error නොවෙන්න
+      // features හසුරුවන නිවැරදි ක්‍රමය:
+      if (data && data.features) {
+        try {
+          // 1. මුලින්ම බලනවා ඒක JSON string එකක්ද කියලා (e.g. '["a", "b"]')
+          if (typeof data.features === 'string' && data.features.startsWith('[')) {
+            data.features = JSON.parse(data.features);
+          } 
+          // 2. නැත්නම් ඒක සාමාන්‍ය කමාවෙන් වෙන් කරපු string එකක්ද කියලා බලනවා (e.g. "a, b")
+          else if (typeof data.features === 'string') {
+            data.features = data.features.split(',').map((f: string) => f.trim());
+          }
+        } catch (e) {
+          console.error("Features parsing error:", e);
+          data.features = [];
+        }
+      } else {
+        data.features = [];
       }
 
       setSoftware(data); 
