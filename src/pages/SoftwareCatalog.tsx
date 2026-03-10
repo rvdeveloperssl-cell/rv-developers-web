@@ -96,8 +96,11 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
           <div className="flex items-center gap-1">
             <Star className={`w-4 h-4 ${Number(s.averageRating) > 0 ? 'text-yellow-500 fill-yellow-500' : 'text-[#A7ACB8]'}`} />
             <span className="text-sm text-[#A7ACB8]">
-               {Number(s.averageRating) > 0 ? Number(s.averageRating).toFixed(1) : 'New'}
-            </span>
+  {/* s.averageRating නැත්නම් s.averagerating (simple letters) තියෙනවාද කියලා බලනවා */}
+  { (parseFloat(s.averageRating || s.averagerating) > 0) 
+    ? parseFloat(s.averageRating || s.averagerating).toFixed(1) 
+    : 'New' }
+</span>
           </div>
         </div>
 
