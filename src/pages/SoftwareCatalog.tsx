@@ -21,26 +21,25 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
   }, []);
 
   const loadData = async () => {
-  setIsLoading(true);
-  try {
-    // softwareService එක ඇතුළේ දැන් cleanUrl තියෙන නිසා ප්‍රශ්නයක් වෙන්නේ නැහැ
-    const [softwareData, categoriesData] = await Promise.all([
-      softwareService.getAllSoftware(),
-      softwareService.getCategories(),
-    ]);
-    
-    setSoftware(softwareData);
-    setCategories(categoriesData);
-  } catch (error) {
-    toast({
-      title: 'Connection Error',
-      description: 'MySQL Clients cannot connect.',
-      variant: 'destructive',
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+    setIsLoading(true);
+    try {
+      const [softwareData, categoriesData] = await Promise.all([
+        softwareService.getAllSoftware(),
+        softwareService.getCategories(),
+      ]);
+      
+      setSoftware(softwareData);
+      setCategories(categoriesData);
+    } catch (error) {
+      toast({
+        title: 'Connection Error',
+        description: 'MySQL Clients cannot connect.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredSoftware = software.filter((s) => {
     const matchesCategory = selectedCategory === 'all' || s.category === selectedCategory;
@@ -53,7 +52,7 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
   const freeSoftware = filteredSoftware.filter((s) => s.isFree);
   const paidSoftware = filteredSoftware.filter((s) => !s.isFree);
 
-  const SoftwareCard = ({ s }: { s: Software }) => (
+  const SoftwareCard = ({ s }: { s: any }) => (
     <div
       className="rv-card group cursor-pointer overflow-hidden"
       onClick={() => onNavigate('software-detail', { id: s.id })}
@@ -95,8 +94,10 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
             {s.name}
           </h3>
           <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-            <span className="text-sm text-[#A7ACB8]">4.8</span>
+            <Star className={`w-4 h-4 ${Number(s.averageRating) > 0 ? 'text-yellow-500 fill-yellow-500' : 'text-[#A7ACB8]'}`} />
+            <span className="text-sm text-[#A7ACB8]">
+               {Number(s.averageRating) > 0 ? Number(s.averageRating).toFixed(1) : 'New'}
+            </span>
           </div>
         </div>
 
@@ -104,14 +105,16 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
 
         {/* Features */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {s.features.slice(0, 3).map((feature) => (
-            <span
-              key={feature}
-              className="text-xs px-2 py-1 rounded bg-[rgba(244,246,255,0.05)] text-[#A7ACB8]"
-            >
-              {feature}
-            </span>
-          ))}
+          {(typeof s.features === 'string' ? s.features.split(',') : s.features || [])
+            .slice(0, 3)
+            .map((feature: string) => (
+              <span
+                key={feature}
+                className="text-xs px-2 py-1 rounded bg-[rgba(244,246,255,0.05)] text-[#A7ACB8]"
+              >
+                {feature.trim()}
+              </span>
+            ))}
         </div>
 
         {/* Footer */}
