@@ -125,12 +125,20 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
   const loadSoftware = async () => {
   setIsLoading(true);
   try {
-    // mockService එක වෙනුවට කෙලින්ම ඔයාගේ API එකට fetch කරන්න
     const res = await fetch(`https://api.rvdevelopers.lk/api/software/${softwareId}`);
     
     if (res.ok) {
       const data = await res.json();
-      setSoftware(data); // දැන් මෙතනට Backend එකේ SQL එකෙන් එන averageRating, reviewCount ටික ලැබෙනවා
+
+      // මෙන්න මේ කෑල්ල අලුතෙන් එකතු කරන්න:
+      // features එක string එකක් නම් ඒක කමාවෙන් (,) වෙන් කරලා array එකක් කරගන්නවා
+      if (data && typeof data.features === 'string') {
+        data.features = data.features.split(',').map((f: string) => f.trim());
+      } else if (!data.features) {
+        data.features = []; // මොකුත්ම නැත්නම් හිස් array එකක් දානවා error නොවෙන්න
+      }
+
+      setSoftware(data); 
     } else {
       toast({ title: 'Error', description: 'Software not found', variant: 'destructive' });
       onNavigate('software');
