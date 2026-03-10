@@ -147,17 +147,33 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
               <p className="text-[#A7ACB8] text-sm">{rev.comment}</p>
               
               {/* Admin Reply පෙන්වන කොටස */}
-              {rev.reply_text && (
-                <div className="mt-4 ml-6 p-3 bg-[#4F46E5]/10 border-l-2 border-[#4F46E5] rounded-r-lg">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-5 h-5 rounded-full bg-[#4F46E5] flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-xs font-bold text-[#F4F6FF] uppercase tracking-wider">Developer Response</span>
-                  </div>
-                  <p className="text-[#A7ACB8] text-sm italic">"{rev.reply_text}"</p>
-                </div>
-              )}
+{rev.reply_text && (
+  <div className="mt-4 ml-4 sm:ml-8 p-4 bg-[#4F46E5]/5 border-l-2 border-[#4F46E5] rounded-r-lg relative overflow-hidden">
+    {/* Background එකට පොඩි ලස්සනක් */}
+    <div className="absolute top-0 right-0 p-2 opacity-5">
+       <MessageSquare className="w-12 h-12 text-[#4F46E5]" />
+    </div>
+
+    <div className="flex items-center gap-2 mb-2">
+      <div className="w-5 h-5 rounded-full bg-[#4F46E5] flex items-center justify-center">
+        <Check className="w-3 h-3 text-white" />
+      </div>
+      <span className="text-[11px] font-bold text-[#4F46E5] uppercase tracking-[0.1em]">
+        Developer Response
+      </span>
+      {rev.reply_date && (
+        <span className="text-[10px] text-[#A7ACB8]">
+          • {new Date(rev.reply_date).toLocaleDateString()}
+        </span>
+      )}
+    </div>
+    
+    {/* මෙතනින් අර Quotes අයින් කළා, දැන් පිරිසිදුවට Text එක විතරක් පෙනෙයි */}
+    <p className="text-[#F4F6FF] text-sm leading-relaxed opacity-90">
+      {rev.reply_text}
+    </p>
+  </div>
+)}
 
               {/* Admin ට විතරක් පේන Reply Button එක */}
               {isAdmin && !rev.reply_text && (
