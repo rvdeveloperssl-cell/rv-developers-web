@@ -23,23 +23,29 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [softwareData, categoriesData] = await Promise.all([
-        softwareService.getAllSoftware(),
-        softwareService.getCategories(),
-      ]);
-      
-      setSoftware(softwareData);
-      setCategories(categoriesData);
+        // Direct Fetch එකක් පාවිච්චි කරන්න Service එක හරහා එන දත්ත වල ප්‍රශ්නයක් තිබේ නම්
+        const res = await fetch('https://api.rvdevelopers.lk/api/software/all');
+        const softwareData = await res.json();
+        
+        // Categories සඳහා වෙනම fetch එකක් (getCategories එක වැඩ නම් ඒක තියාගන්න)
+        const categoriesRes = await fetch('https://api.rvdevelopers.lk/api/categories'); // ඔයාගේ categories API එකේ නම
+        const categoriesData = await categoriesRes.json();
+        
+        // දත්ත process කිරීම (පරණ code එකේ තිබුණ s.averageRating logic එක මෙතනට වැදගත්)
+        setSoftware(softwareData);
+        setCategories(categoriesData);
+        
     } catch (error) {
-      toast({
-        title: 'Connection Error',
-        description: 'MySQL Clients cannot connect.',
-        variant: 'destructive',
-      });
+        console.error("Fetch error:", error);
+        toast({
+            title: 'Connection Error',
+            description: 'Failed to fetch software catalog.',
+            variant: 'destructive',
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
 
   const filteredSoftware = software.filter((s) => {
     const matchesCategory = selectedCategory === 'all' || s.category === selectedCategory;
@@ -96,10 +102,7 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
           <div className="flex items-center gap-1">
             <Star className={`w-4 h-4 ${Number(s.averageRating) > 0 ? 'text-yellow-500 fill-yellow-500' : 'text-[#A7ACB8]'}`} />
             <span className="text-sm text-[#A7ACB8]">
-  {/* s.averageRating නැත්නම් s.averagerating (simple letters) තියෙනවාද කියලා බලනවා */}
-  { (parseFloat(s.averageRating || s.averagerating) > 0) 
-    ? parseFloat(s.averageRating || s.averagerating).toFixed(1) 
-    : 'New' }
+    {Number(s.averageRating) > 0 ? Number(s.averageRating).toFixed(1) : 'New'}
 </span>
           </div>
         </div>
