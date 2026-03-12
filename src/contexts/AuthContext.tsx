@@ -119,13 +119,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 };
 
-  const verifyOTP = async (email: string, otp: string) => {
+  // AuthContext.tsx ඇතුළේ දළ වශයෙන් මෙහෙමයි වෙන්නේ
+const verifyOTP = async (email: string, otp: string) => {
     const savedOTP = sessionStorage.getItem('rv_temp_otp');
+    
     if (otp === savedOTP) {
-      return { success: true, message: 'Verified!' };
+        // 1. OTP එක හරි නම්, Backend එකේ Register API එකට Data යවනවා
+        try {
+            const response = await fetch('https://api.rvdevelopers.lk/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tempRegistrationData) // කලින් සේව් කරගත් යූසර් දත්ත
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                // සේරම හරි නම් යූසර්ට ලයිසන් එක පෙන්වන්න පුළුවන්
+                return { success: true, licenseKey: result.licenseKey };
+            }
+        } catch (error) {
+            return { success: false, message: 'Server error during registration' };
+        }
     }
     return { success: false, message: 'Invalid code.' };
-  };
+};
 
   const refreshUser = () => {
     const currentUser = authService.getCurrentUser();
