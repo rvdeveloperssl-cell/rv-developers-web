@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { 
   Plus, Edit2, Trash2, Search, X, Smile, 
   Link as LinkIcon, Download, Smartphone, 
-  Globe, Package, Info, CheckCircle, ExternalLink 
+  Globe, Package, Info, CheckCircle, ExternalLink,
+  Image as ImageIcon
 } from 'lucide-react';
 import type { Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -28,18 +29,22 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // URL සහ Slug සඳහා වෙනම temporary states
+  const [tempSlug, setTempSlug] = useState('');
+  const [tempImageUrl, setTempImageUrl] = useState('');
+
   const [formData, setFormData] = useState({
     name: '',
-    productSlug: '', // SEO & Unique URL identifier
+    productSlug: '',
     description: '',
     price: 0,
     version: '1.0.0',
     category: '',
     imageUrl: '',
     systemRequirements: '',
-    downloadUrl: '', // Desktop link
-    mobileAppUrl: '', // Mobile link
-    extraLink: '',    // Manual/Docs link
+    downloadUrl: '',
+    mobileAppUrl: '',
+    extraLink: '',
     isFree: false,
     isActive: true,
     features: [''],
@@ -140,6 +145,8 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       isActive: true,
       features: [''],
     });
+    setTempSlug('');
+    setTempImageUrl('');
     setEditingSoftware(null);
   };
 
@@ -161,7 +168,21 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       isActive: s.isActive === 1 || s.isActive === true,
       features: s.features ? (typeof s.features === 'string' ? JSON.parse(s.features) : s.features) : [''],
     });
+    setTempSlug(s.productSlug || '');
+    setTempImageUrl(s.imageUrl || '');
     setIsDialogOpen(true);
+  };
+
+  // + Button එක එබූ විට දත්ත Update කරන Functions
+  const applySlug = () => {
+    const slug = tempSlug.toLowerCase().replace(/\s+/g, '-');
+    setFormData({ ...formData, productSlug: slug });
+    toast({ title: "Slug Updated", description: `URL will be /software/${slug}` });
+  };
+
+  const applyImageUrl = () => {
+    setFormData({ ...formData, imageUrl: tempImageUrl });
+    toast({ title: "Image Applied", description: "Cover image preview updated." });
   };
 
   const filteredSoftware = software.filter(
@@ -200,7 +221,6 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
               </DialogHeader>
               
               <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-                {/* Basic Info Group */}
                 <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Display Name</label>
@@ -214,42 +234,76 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Product Slug (URL Path)</label>
-                    <input
-                      type="text"
-                      value={formData.productSlug}
-                      onChange={(e) => setFormData({ ...formData, productSlug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                      className="rv-input h-11 border-indigo-500/30 focus:border-indigo-500"
-                      placeholder="e.g. pos-pro-ultra"
-                      required
-                    />
+                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Product Slug</label>
+                    <div className="flex gap-2">
+                        <input
+                        type="text"
+                        value={tempSlug}
+                        onChange={(e) => setTempSlug(e.target.value)}
+                        className="rv-input h-11 border-indigo-500/30"
+                        placeholder="e.g. pos-pro-ultra"
+                        />
+                        <button 
+                            type="button"
+                            onClick={applySlug}
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 rounded-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Description */}
+                {/* Cover Image URL with Preview */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Description & Release Notes</label>
+                  <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Cover Image Link</label>
+                  <div className="flex gap-4 items-start">
+                    <div className="flex-1 flex gap-2">
+                        <input
+                        type="url"
+                        value={tempImageUrl}
+                        onChange={(e) => setTempImageUrl(e.target.value)}
+                        className="rv-input h-11 bg-[#05060B]"
+                        placeholder="https://imgur.com/your-image.jpg"
+                        />
+                        <button 
+                            type="button"
+                            onClick={applyImageUrl}
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 rounded-xl transition-all"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
+                    </div>
+                    {formData.imageUrl && (
+                        <div className="w-20 h-11 rounded-lg overflow-hidden border border-white/10 ring-2 ring-indigo-500/20">
+                            <img src={formData.imageUrl} className="w-full h-full object-cover" alt="Preview" />
+                        </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Description</label>
                   <div className="relative">
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="rv-input min-h-[120px] py-4 pr-12"
-                      placeholder="Describe the software functionality and updates..."
+                      className="rv-input min-h-[100px] py-4 pr-12"
+                      placeholder="Describe the software functionality..."
                       required
                     />
                     <Smile className="absolute right-4 top-4 w-5 h-5 text-indigo-400 opacity-40" />
                   </div>
                 </div>
 
-                {/* Technical Specs */}
-                <div className="grid md:grid-cols-3 gap-5">
+                <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Build Version</label>
                     <input
                       type="text"
                       value={formData.version}
                       onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                      className="rv-input"
+                      className="rv-input h-11"
                       placeholder="1.0.0"
                     />
                   </div>
@@ -259,17 +313,8 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                       type="text"
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="rv-input"
+                      className="rv-input h-11"
                       placeholder="Enterprise / Utility"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Cover Image URL</label>
-                    <input
-                      type="url"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                      className="rv-input"
                     />
                   </div>
                 </div>
@@ -278,40 +323,40 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                 <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-5">
                   <div className="flex items-center gap-2 mb-2">
                     <Download className="w-4 h-4 text-indigo-400" />
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-200">Package Distribution Links</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-200">Distribution Asset Hub</h3>
                   </div>
                   
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Globe className="w-3 h-3" /> Desktop Application (.exe / .msi)</div>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Globe className="w-3 h-3" /> Desktop Setup Link</div>
                       <input
                         type="url"
                         value={formData.downloadUrl}
                         onChange={(e) => setFormData({ ...formData, downloadUrl: e.target.value })}
-                        className="rv-input bg-[#05060B]"
+                        className="rv-input bg-[#05060B] h-10"
                         placeholder="https://cdn.rv.lk/setup.exe"
                       />
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Smartphone className="w-3 h-3" /> Android / Mobile Package (.apk)</div>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Smartphone className="w-3 h-3" /> Mobile App Link</div>
                       <input
                         type="url"
                         value={formData.mobileAppUrl}
                         onChange={(e) => setFormData({ ...formData, mobileAppUrl: e.target.value })}
-                        className="rv-input bg-[#05060B]"
-                        placeholder="https://cdn.rv.lk/app.apk"
+                        className="rv-input bg-[#05060B] h-10"
+                        placeholder="https://playstore.com/app"
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Info className="w-3 h-3" /> Documentation / Extra Resources</div>
-                    <input
-                      type="url"
-                      value={formData.extraLink}
-                      onChange={(e) => setFormData({ ...formData, extraLink: e.target.value })}
-                      className="rv-input bg-[#05060B]"
-                      placeholder="User Manual or Documentation URL"
-                    />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Info className="w-3 h-3" /> Docs / Extra Link</div>
+                      <input
+                        type="url"
+                        value={formData.extraLink}
+                        onChange={(e) => setFormData({ ...formData, extraLink: e.target.value })}
+                        className="rv-input bg-[#05060B] h-10"
+                        placeholder="User Manual Link"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -465,9 +510,9 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                       </td>
                       <td className="py-5 px-6">
                         <div className="flex gap-2">
-                          {s.downloadUrl && <Download className="w-4 h-4 text-blue-400" title="Desktop Link Available" />}
-                          {s.mobileAppUrl && <Smartphone className="w-4 h-4 text-purple-400" title="Mobile App Available" />}
-                          {s.extraLink && <ExternalLink className="w-4 h-4 text-orange-400" title="Docs Available" />}
+                          {s.downloadUrl && <Download className="w-4 h-4 text-blue-400" title="Desktop Link" />}
+                          {s.mobileAppUrl && <Smartphone className="w-4 h-4 text-purple-400" title="Mobile Link" />}
+                          {s.extraLink && <ExternalLink className="w-4 h-4 text-orange-400" title="Docs Link" />}
                         </div>
                       </td>
                       <td className="py-5 px-6">
@@ -490,12 +535,6 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                   ))}
                 </tbody>
               </table>
-              {filteredSoftware.length === 0 && (
-                <div className="p-20 text-center">
-                  <Package className="w-12 h-12 text-white/5 mx-auto mb-4" />
-                  <p className="text-[#A7ACB8]">No packages found in the database.</p>
-                </div>
-              )}
             </div>
           )}
         </div>
