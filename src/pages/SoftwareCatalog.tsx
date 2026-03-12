@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Search, Filter, Download, ArrowRight, Star } from 'lucide-react';
-import { softwareService } from '@/services/mockSoftwareService';
-import type { Software, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import type { Software, Category } from '@/types';
 
 interface SoftwareCatalogProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
@@ -21,64 +20,56 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
   }, []);
 
   const loadData = async () => {
-  setIsLoading(true);
-  try {
-    const res = await fetch('https://api.rvdevelopers.lk/api/software/all');
-    
-    if (!res.ok) throw new Error('Network response was not ok');
-    
-    let softwareData = await res.json();
-
-    // --- මෙන්න මෙතන තමයි Features ටික හදන කෑල්ල ---
-    softwareData = softwareData.map((s: any) => {
-      let parsedFeatures = [];
+    setIsLoading(true);
+    try {
+      const res = await fetch('https://api.rvdevelopers.lk/api/software/all');
+      if (!res.ok) throw new Error('Network response was not ok');
       
-      if (s.features) {
-        try {
-          // 1. බලනවා ඒක ["a", "b"] වගේ JSON string එකක්ද කියලා
-          if (typeof s.features === 'string' && s.features.startsWith('[')) {
-            parsedFeatures = JSON.parse(s.features);
-          } 
-          // 2. නැත්නම් ඒක "a, b, c" වගේ comma separated string එකක්ද කියලා බලනවා
-          else if (typeof s.features === 'string') {
-            parsedFeatures = s.features.split(',').map((f: string) => f.trim());
+      let softwareData = await res.json();
+
+      softwareData = softwareData.map((s: any) => {
+        let parsedFeatures = [];
+        if (s.features) {
+          try {
+            if (typeof s.features === 'string' && s.features.startsWith('[')) {
+              parsedFeatures = JSON.parse(s.features);
+            } 
+            else if (typeof s.features === 'string') {
+              parsedFeatures = s.features.split(',').map((f: string) => f.trim());
+            }
+            else if (Array.isArray(s.features)) {
+              parsedFeatures = s.features;
+            }
+          } catch (e) {
+            console.error("Feature parsing error:", e);
+            parsedFeatures = [];
           }
-          // 3. දැනටමත් array එකක් නම් ඒකම ගන්නවා
-          else if (Array.isArray(s.features)) {
-            parsedFeatures = s.features;
-          }
-        } catch (e) {
-          console.error("Feature parsing error for:", s.name, e);
-          parsedFeatures = [];
         }
-      }
-      
-      return { ...s, features: parsedFeatures };
-    });
+        return { ...s, features: parsedFeatures };
+      });
 
-    setSoftware(softwareData);
+      setSoftware(softwareData);
 
-    // Categories ටික extract කරගන්නා හැටි
-    const uniqueCategories = [
-      { id: 'all', name: 'All Categories' },
-      ...Array.from(new Set(softwareData.map((s: any) => s.category)))
-        .filter(Boolean)
-        .map((cat, index) => ({ id: index.toString(), name: cat }))
-    ];
-    
-    setCategories(uniqueCategories.filter(c => c.name !== 'All Categories'));
+      const uniqueCategories = [
+        { id: 'all', name: 'All Categories' },
+        ...Array.from(new Set(softwareData.map((s: any) => s.category)))
+          .filter(Boolean)
+          .map((cat, index) => ({ id: index.toString(), name: cat as string }))
+      ];
+      setCategories(uniqueCategories.filter(c => c.name !== 'All Categories'));
 
-  } catch (error) {
-    console.error("Fetch error:", error);
-    toast({
-      title: 'Connection Error',
-      description: 'Could not connect to the server.',
-      variant: 'destructive',
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+    } catch (error) {
+      console.error("Fetch error:", error);
+      toast({
+        title: 'Connection Error',
+        description: 'Could not connect to the server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filteredSoftware = software.filter((s) => {
     const matchesCategory = selectedCategory === 'all' || s.category === selectedCategory;
     const matchesSearch =
@@ -95,7 +86,6 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
       className="rv-card group cursor-pointer overflow-hidden"
       onClick={() => onNavigate('software-detail', { id: s.id })}
     >
-      {/* Image */}
       <div className="relative aspect-video overflow-hidden">
         <img
           src={s.imageUrl}
@@ -104,7 +94,6 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] via-transparent to-transparent" />
         
-        {/* Badges */}
         <div className="absolute top-3 left-3 flex gap-2">
           {s.isFree ? (
             <span className="px-2 py-1 text-xs font-medium rounded bg-green-500/20 text-green-400">
@@ -112,12 +101,12 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
             </span>
           ) : (
             <span className="px-2 py-1 text-xs font-medium rounded bg-[rgba(79,70,229,0.3)] text-[#4F46E5]">
-              LKR {s.price.toLocaleString()}
+              {/* Price එක ආරක්ෂිතවtoLocaleString කරන හැටි */}
+              LKR {(Number(s.price) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
           )}
         </div>
 
-        {/* Version Badge */}
         <div className="absolute top-3 right-3">
           <span className="px-2 py-1 text-xs font-medium rounded bg-[rgba(244,246,255,0.1)] text-[#A7ACB8]">
             v{s.version}
@@ -125,7 +114,6 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-5">
         <div className="flex items-start justify-between mb-2">
           <h3 className="text-lg font-semibold text-[#F4F6FF] group-hover:text-[#4F46E5] transition-colors">
@@ -134,32 +122,29 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
           <div className="flex items-center gap-1">
             <Star className={`w-4 h-4 ${Number(s.averageRating) > 0 ? 'text-yellow-500 fill-yellow-500' : 'text-[#A7ACB8]'}`} />
             <span className="text-sm text-[#A7ACB8]">
-    {Number(s.averageRating) > 0 ? Number(s.averageRating).toFixed(1) : 'New'}
-</span>
+              {Number(s.averageRating) > 0 ? Number(s.averageRating).toFixed(1) : 'New'}
+            </span>
           </div>
         </div>
 
         <p className="text-sm text-[#A7ACB8] mb-4 line-clamp-2">{s.description}</p>
 
-        {/* Features */}
+        {/* Features පෙන්වන තැන array එකක් ලෙස ආරක්ෂිතව හැසිරවීම */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {(typeof s.features === 'string' ? s.features.split(',') : s.features || [])
-            .slice(0, 3)
-            .map((feature: string) => (
-              <span
-                key={feature}
-                className="text-xs px-2 py-1 rounded bg-[rgba(244,246,255,0.05)] text-[#A7ACB8]"
-              >
-                {feature.trim()}
-              </span>
-            ))}
+          {Array.isArray(s.features) && s.features.slice(0, 3).map((feature: string, idx: number) => (
+            <span
+              key={idx}
+              className="text-xs px-2 py-1 rounded bg-[rgba(244,246,255,0.05)] text-[#A7ACB8]"
+            >
+              {feature.trim()}
+            </span>
+          ))}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-[rgba(244,246,255,0.05)]">
           <div className="flex items-center gap-2 text-sm text-[#A7ACB8]">
             <Download className="w-4 h-4" />
-            <span>{s.downloadCount.toLocaleString()}</span>
+            <span>{(Number(s.downloadCount) || 0).toLocaleString()}</span>
           </div>
           <button className="text-sm text-[#4F46E5] flex items-center gap-1 group-hover:gap-2 transition-all">
             View Details
@@ -172,20 +157,17 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
 
   return (
     <div className="min-h-screen pt-24 pb-16">
-      {/* Header */}
       <div className="rv-container mb-12">
         <div className="text-center max-w-2xl mx-auto mb-10">
           <span className="rv-badge mb-4">Software Catalog</span>
           <h1 className="text-4xl lg:text-5xl font-bold text-[#F4F6FF] mt-4 mb-4">
-            Premium Software{' '}
-            <span className="rv-text-gradient">Solutions</span>
+            Premium Software <span className="rv-text-gradient">Solutions</span>
           </h1>
           <p className="text-lg text-[#A7ACB8]">
             Discover our collection of enterprise-grade software products designed for modern businesses.
           </p>
         </div>
 
-        {/* Search & Filter */}
         <div className="flex flex-col sm:flex-row gap-4 max-w-3xl mx-auto">
           <div className="relative flex-grow">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A7ACB8]" />
@@ -215,7 +197,6 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="rv-container">
         {isLoading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -225,14 +206,12 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
                 <div className="p-5 space-y-3">
                   <div className="h-5 bg-[rgba(244,246,255,0.05)] rounded w-3/4" />
                   <div className="h-4 bg-[rgba(244,246,255,0.05)] rounded" />
-                  <div className="h-4 bg-[rgba(244,246,255,0.05)] rounded w-1/2" />
                 </div>
               </div>
             ))}
           </div>
         ) : (
           <>
-            {/* Free Software Section */}
             {freeSoftware.length > 0 && (
               <div className="mb-12">
                 <h2 className="text-2xl font-bold text-[#F4F6FF] mb-6 flex items-center gap-3">
@@ -249,7 +228,6 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
               </div>
             )}
 
-            {/* Paid Software Section */}
             {paidSoftware.length > 0 && (
               <div>
                 <h2 className="text-2xl font-bold text-[#F4F6FF] mb-6 flex items-center gap-3">
@@ -268,15 +246,9 @@ export default function SoftwareCatalog({ onNavigate }: SoftwareCatalogProps) {
 
             {filteredSoftware.length === 0 && (
               <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-[rgba(244,246,255,0.05)] flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8 text-[#A7ACB8]" />
-                </div>
-                <h3 className="text-xl font-semibold text-[#F4F6FF] mb-2">
-                  No software found
-                </h3>
-                <p className="text-[#A7ACB8]">
-                  Try adjusting your search or filter criteria
-                </p>
+                <Search className="w-12 h-12 text-[#A7ACB8] mx-auto mb-4 opacity-20" />
+                <h3 className="text-xl font-semibold text-[#F4F6FF] mb-2">No software found</h3>
+                <p className="text-[#A7ACB8]">Try adjusting your search or filter criteria</p>
               </div>
             )}
           </>
