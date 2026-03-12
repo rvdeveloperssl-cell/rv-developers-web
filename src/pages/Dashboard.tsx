@@ -11,7 +11,8 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
-  X
+  X,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { softwareService } from '@/services/mockSoftwareService';
@@ -91,6 +92,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   const copyLicenseKey = (key: string) => {
+    if (!key || key === "No Key Assigned") return;
     navigator.clipboard.writeText(key);
     toast({
       title: 'Copied!',
@@ -112,17 +114,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       color: 'bg-emerald-500/10 text-emerald-400',
     },
     {
-  icon: CreditCard,
-  label: 'Total Spent',
-  value: `LKR ${(purchases || [])
-    .filter((p) => p.paymentStatus === 'verified')
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0) // මෙතන Number() එක පාවිච්චි කරන්න
-    .toLocaleString('en-LK', { 
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
-    })}`,
-  color: 'bg-purple-500/10 text-purple-400',
-},
+      icon: CreditCard,
+      label: 'Total Spent',
+      value: `LKR ${(purchases || [])
+        .filter((p) => p.paymentStatus === 'verified')
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+        .toLocaleString('en-LK', { 
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2 
+        })}`,
+      color: 'bg-purple-500/10 text-purple-400',
+    },
     {
       icon: FileText,
       label: 'Invoices',
@@ -131,8 +133,42 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     },
   ];
 
+  // --- NEW MASTER KEY SECTION COMPONENT ---
+  const renderMasterKeySection = () => {
+    const mainKey = licenses.length > 0 ? licenses[0].licenseKey : "No Key Assigned";
+    
+    return (
+      <div className="rv-panel p-6 mb-10 border border-[#4F46E5]/30 bg-gradient-to-br from-[#4F46E5]/10 via-transparent to-transparent flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group">
+        <div className="absolute -right-10 -top-10 w-40 h-40 bg-[#4F46E5]/10 rounded-full blur-3xl group-hover:bg-[#4F46E5]/20 transition-all" />
+        
+        <div className="flex items-center gap-5 relative z-10">
+          <div className="w-14 h-14 rounded-2xl bg-[#4F46E5] flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.4)]">
+            <ShieldCheck className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h2 className="text-[#F4F6FF] font-bold text-xl tracking-tight">Master License Key</h2>
+            <p className="text-[#A7ACB8] text-sm mt-1 font-medium">Use this key to activate all your authorized RV applications.</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3 bg-black/50 p-2 pl-5 rounded-2xl border border-white/10 w-full md:w-auto justify-between relative z-10">
+          <code className="text-[#4F46E5] font-mono text-xl font-bold tracking-[0.2em]">{mainKey}</code>
+          <button 
+            onClick={() => copyLicenseKey(mainKey)}
+            className="bg-[#4F46E5] hover:bg-[#3f38c2] text-white p-3 rounded-xl transition-all shadow-lg active:scale-95"
+          >
+            <Copy className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const renderOverview = () => (
     <div className="space-y-10">
+      {/* Master Key Card Added Here */}
+      {renderMasterKeySection()}
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <div key={stat.label} className="rv-panel p-6 border border-white/5 hover:border-white/10 transition-all">
@@ -201,16 +237,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     </h3>
                     
                     <div className="mt-4 space-y-3">
-                      <div className="bg-black/40 rounded-lg p-3 border border-white/5">
-                        <div className="text-[10px] text-[#A7ACB8] uppercase tracking-widest mb-1 font-bold">License Key</div>
-                        <div className="flex items-center justify-between">
-                          <code className="text-[#4F46E5] font-mono text-sm tracking-tight">{license.licenseKey}</code>
-                          <button 
-                            onClick={() => copyLicenseKey(license.licenseKey)}
-                            className="text-[#A7ACB8] hover:text-white p-1 transition-colors"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
+                      <div className="bg-black/40 rounded-lg p-3 border border-white/5 flex items-center justify-between">
+                        <div className="text-[10px] text-[#A7ACB8] uppercase tracking-widest font-bold">Access Status</div>
+                        <div className="text-emerald-400 text-[10px] font-bold uppercase flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" /> Authorized
                         </div>
                       </div>
 
@@ -421,33 +451,18 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   return (
     <div className="min-h-screen pt-24 pb-16 bg-[#05060B]">
       <style dangerouslySetInnerHTML={{ __html: `
-  @media print {
-    /* මුළු screen එකම hide කරන්න */
-    body * {
-      visibility: hidden;
-    }
-    /* Invoice එක තියෙන container එක සහ එහි ඇතුළත දේවල් විතරක් පෙන්වන්න */
-    .print-section, .print-section * {
-      visibility: visible;
-    }
-    /* Invoice එක පිටුවේ ඉහළටම ගන්න */
-    .print-section {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100% !important;
-      margin: 0 !important;
-      padding: 10mm !important;
-      background: white !important;
-      color: black !important;
-    }
-    /* පින්ට් වෙද්දී අනවශ්‍ය margins අයින් කරන්න */
-    @page {
-      size: auto;
-      margin: 0mm;
-    }
-  }
-`}} />
+        @media print {
+          body * { visibility: hidden; }
+          .print-section, .print-section * { visibility: visible; }
+          .print-section {
+            position: absolute; left: 0; top: 0;
+            width: 100% !important; margin: 0 !important;
+            padding: 10mm !important; background: white !important;
+            color: black !important;
+          }
+          @page { size: auto; margin: 0mm; }
+        }
+      `}} />
 
       <div className="rv-container">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
