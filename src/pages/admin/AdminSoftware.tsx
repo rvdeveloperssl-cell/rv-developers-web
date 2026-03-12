@@ -220,17 +220,30 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Product Slug (URL Path)</label>
-                    <input
-                      type="text"
-                      value={formData.productSlug}
-                      onChange={(e) => setFormData({ ...formData, productSlug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                      className="rv-input h-11 border-indigo-500/30 focus:border-indigo-500"
-                      placeholder="e.g. pos-pro-ultra"
-                      required
-                    />
-                  </div>
-                </div>
+  <label className="text-sm font-medium text-[#A7ACB8]">Product Slug (URL Path)</label>
+  <div className="flex gap-2">
+    <input
+      type="text"
+      value={formData.slug} // හෝ ඔයා slug එක store කරන variable එක
+      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+      placeholder="my-awesome-software"
+      className="flex-1 bg-[#1A1F2E] border border-[#2A3447] rounded-lg px-4 py-2 text-[#F4F6FF] focus:outline-none focus:border-[#4F46E5]"
+    />
+    <button
+      type="button"
+      onClick={() => {
+        const generatedSlug = formData.name
+          .toLowerCase()
+          .replace(/ /g, '-')
+          .replace(/[^\w-]+/g, '');
+        setFormData({ ...formData, slug: generatedSlug });
+      }}
+      className="px-3 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA] transition-colors text-sm font-medium"
+    >
+      Generate
+    </button>
+  </div>
+</div>
 
                 {/* Description */}
                 <div className="space-y-2">
