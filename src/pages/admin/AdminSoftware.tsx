@@ -3,7 +3,7 @@ import {
   Plus, Edit2, Trash2, Search, X, Smile, 
   Link as LinkIcon, Download, Smartphone, 
   Globe, Package, Info, CheckCircle, ExternalLink,
-  Image as ImageIcon
+  Image as ImageIcon, Monitor
 } from 'lucide-react';
 import type { Software } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -44,7 +44,6 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
     isFree: false,
     isActive: true,
     features: [''],
-    // අලුතින් එකතු කළ ලිංක් හබ් එක (Link + Icon/Image)
     productLinks: [{ label: '', url: '', iconUrl: '' }] 
   });
 
@@ -154,7 +153,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       name: s.name,
       productSlug: s.productSlug || '',
       description: s.description || '',
-      price: s.price,
+      price: Number(s.price),
       version: s.version,
       category: s.category,
       imageUrl: s.imageUrl,
@@ -207,47 +206,43 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
               
               <form onSubmit={handleSubmit} className="space-y-6 mt-6">
                 {/* Basic Info Group */}
-<div className="grid md:grid-cols-2 gap-5">
-  {/* Display Name Input */}
-  <div className="space-y-2">
-    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Display Name</label>
-    <input
-      type="text"
-      value={formData.name}
-      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-      className="rv-input h-11"
-      placeholder="e.g. RV PRO POS ULTRA"
-      required
-    />
-  </div>
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Display Name</label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="rv-input h-11"
+                      placeholder="e.g. RV PRO POS ULTRA"
+                      required
+                    />
+                  </div>
 
-  {/* Product Slug Input with Generate Button */}
-  <div className="space-y-2">
-    <label className="text-sm font-medium text-[#A7ACB8]">Product Slug (URL Path)</label>
-    <div className="flex gap-2">
-      <input
-        type="text"
-        value={formData.slug || ''} 
-        onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-        placeholder="my-awesome-software"
-        className="flex-1 bg-[#1A1F2E] border border-[#2A3447] rounded-lg px-4 py-2 text-[#F4F6FF] focus:outline-none focus:border-[#4F46E5]"
-      />
-      <button
-        type="button"
-        onClick={() => {
-          const generatedSlug = formData.name
-            .toLowerCase()
-            .replace(/ /g, '-')
-            .replace(/[^\w-]+/g, '');
-          setFormData({ ...formData, slug: generatedSlug });
-        }}
-        className="px-3 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA] transition-colors text-sm font-medium whitespace-nowrap"
-      >
-        Generate
-      </button>
-    </div>
-  </div>
-</div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Product Slug</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={formData.productSlug} 
+                        onChange={(e) => setFormData({ ...formData, productSlug: e.target.value })}
+                        placeholder="my-awesome-software"
+                        className="rv-input h-11 flex-1"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const generatedSlug = formData.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+                          setFormData({ ...formData, productSlug: generatedSlug });
+                        }}
+                        className="px-3 bg-indigo-500/10 text-indigo-400 rounded-lg border border-indigo-500/20 hover:bg-indigo-500/20 transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Description */}
                 <div className="space-y-2">
@@ -256,11 +251,26 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="rv-input min-h-[120px] py-4 pr-12"
+                      className="rv-input min-h-[100px] py-4 pr-12"
                       placeholder="Describe the software functionality and updates..."
                       required
                     />
                     <Smile className="absolute right-4 top-4 w-5 h-5 text-indigo-400 opacity-40" />
+                  </div>
+                </div>
+
+                {/* System Requirements (Missed Section Fixed) */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">System Requirements</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.systemRequirements}
+                      onChange={(e) => setFormData({ ...formData, systemRequirements: e.target.value })}
+                      className="rv-input h-11 pl-10"
+                      placeholder="Windows 10+, 8GB RAM, i5 Processor..."
+                    />
+                    <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
                   </div>
                 </div>
 
@@ -298,7 +308,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                   </div>
                 </div>
 
-                {/* Distribution Asset Hub (Enhanced with Add Button and Image URLs) */}
+                {/* Distribution Asset Hub */}
                 <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-5">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
