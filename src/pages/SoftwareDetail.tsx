@@ -20,7 +20,6 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
   const [newComment, setNewComment] = useState('');
   const [rating, setRating] = useState(5);
   
-  // Reply සඳහා අවශ්‍ය State
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
 
@@ -28,7 +27,6 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
     fetchReviews();
   }, [softwareId]);
 
-  // Admin Dashboard එකෙන් එන scroll focus එක handle කිරීම
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const focusId = params.get('focusComment');
@@ -47,7 +45,7 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
     try {
       const res = await fetch(`https://api.rvdevelopers.lk/api/reviews/${softwareId}`);
       const data = await res.json();
-      setReviews(data);
+      setReviews(data || []);
     } catch (error) {
       console.error("Error fetching reviews:", error);
     }
@@ -75,7 +73,6 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
     }
   };
 
-  // Admin Reply එක Submit කරන Function එක
   const handleReplySubmit = async (reviewId: number) => {
     if (!replyText.trim()) return;
 
@@ -141,41 +138,37 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
               <div className="flex justify-between mb-2">
                 <span className="font-medium text-[#F4F6FF]">{rev.fullName}</span>
                 <div className="flex gap-1 text-yellow-400">
-                  {Array(rev.rating).fill(0).map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}
+                  {Array(Number(rev.rating) || 0).fill(0).map((_, i) => <Star key={i} className="w-3 h-3 fill-current" />)}
                 </div>
               </div>
               <p className="text-[#A7ACB8] text-sm">{rev.comment}</p>
               
-              {/* Admin Reply පෙන්වන කොටස */}
-{rev.reply_text && (
-  <div className="mt-4 ml-4 sm:ml-8 p-4 bg-[#4F46E5]/5 border-l-2 border-[#4F46E5] rounded-r-lg relative overflow-hidden">
-    {/* Background එකට පොඩි ලස්සනක් */}
-    <div className="absolute top-0 right-0 p-2 opacity-5">
-       <MessageSquare className="w-12 h-12 text-[#4F46E5]" />
-    </div>
+              {rev.reply_text && (
+                <div className="mt-4 ml-4 sm:ml-8 p-4 bg-[#4F46E5]/5 border-l-2 border-[#4F46E5] rounded-r-lg relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-2 opacity-5">
+                     <MessageSquare className="w-12 h-12 text-[#4F46E5]" />
+                  </div>
 
-    <div className="flex items-center gap-2 mb-2">
-      <div className="w-5 h-5 rounded-full bg-[#4F46E5] flex items-center justify-center">
-        <Check className="w-3 h-3 text-white" />
-      </div>
-      <span className="text-[11px] font-bold text-[#4F46E5] uppercase tracking-[0.1em]">
-        Developer Response
-      </span>
-      {rev.reply_date && (
-        <span className="text-[10px] text-[#A7ACB8]">
-          • {new Date(rev.reply_date).toLocaleDateString()}
-        </span>
-      )}
-    </div>
-    
-    {/* මෙතනින් අර Quotes අයින් කළා, දැන් පිරිසිදුවට Text එක විතරක් පෙනෙයි */}
-    <p className="text-[#F4F6FF] text-sm leading-relaxed opacity-90">
-      {rev.reply_text}
-    </p>
-  </div>
-)}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-[#4F46E5] flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-[11px] font-bold text-[#4F46E5] uppercase tracking-[0.1em]">
+                      Developer Response
+                    </span>
+                    {rev.reply_date && (
+                      <span className="text-[10px] text-[#A7ACB8]">
+                        • {new Date(rev.reply_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-[#F4F6FF] text-sm leading-relaxed opacity-90">
+                    {rev.reply_text}
+                  </p>
+                </div>
+              )}
 
-              {/* Admin ට විතරක් පේන Reply Button එක */}
               {isAdmin && !rev.reply_text && (
                 <button 
                   onClick={() => setReplyingTo(replyingTo === rev.id ? null : rev.id)}
@@ -185,7 +178,6 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
                 </button>
               )}
 
-              {/* Admin Reply Input Box */}
               {replyingTo === rev.id && (
                 <div className="mt-3 flex gap-2">
                   <input 
@@ -226,41 +218,41 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
   }, [softwareId]);
 
   const loadSoftware = async () => {
-  setIsLoading(true);
-  try {
-    const res = await fetch(`https://api.rvdevelopers.lk/api/software/${softwareId}`);
-    
-    if (res.ok) {
-      const data = await res.json();
+    setIsLoading(true);
+    try {
+      const res = await fetch(`https://api.rvdevelopers.lk/api/software/${softwareId}`);
+      
+      if (res.ok) {
+        const data = await res.json();
 
-      if (data && data.features) {
-        try {
-          if (typeof data.features === 'string' && data.features.startsWith('[')) {
-            data.features = JSON.parse(data.features);
-          } 
-          else if (typeof data.features === 'string') {
-            data.features = data.features.split(',').map((f: string) => f.trim());
+        if (data && data.features) {
+          try {
+            if (typeof data.features === 'string' && data.features.startsWith('[')) {
+              data.features = JSON.parse(data.features);
+            } 
+            else if (typeof data.features === 'string') {
+              data.features = data.features.split(',').map((f: string) => f.trim());
+            }
+          } catch (e) {
+            console.error("Features parsing error:", e);
+            data.features = [];
           }
-        } catch (e) {
-          console.error("Features parsing error:", e);
+        } else {
           data.features = [];
         }
-      } else {
-        data.features = [];
-      }
 
-      setSoftware(data); 
-    } else {
-      toast({ title: 'Error', description: 'Software not found', variant: 'destructive' });
-      onNavigate('software');
+        setSoftware(data); 
+      } else {
+        toast({ title: 'Error', description: 'Software not found', variant: 'destructive' });
+        onNavigate('software');
+      }
+    } catch (error) {
+      console.error("Load Error:", error);
+      toast({ title: 'Error', description: 'Failed to load software details', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Load Error:", error);
-    toast({ title: 'Error', description: 'Failed to load software details', variant: 'destructive' });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleDownload = () => {
     if (!isAuthenticated) {
@@ -357,7 +349,8 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                   </>
                 ) : (
                   <>
-                    <span className="text-4xl font-bold text-[#F4F6FF]">LKR {software.price?.toLocaleString()}</span>
+                    {/* මෙතනට ?. සහ fallback අගය එකතු කළා */}
+                    <span className="text-4xl font-bold text-[#F4F6FF]">LKR {(Number(software.price) || 0).toLocaleString()}</span>
                     <p className="text-sm text-[#A7ACB8] mt-2">One-time purchase</p>
                   </>
                 )}
@@ -387,7 +380,8 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-[#A7ACB8]">Downloads</span>
-                    <span className="text-[#F4F6FF]">{software.downloadCount?.toLocaleString()}</span>
+                    {/* මෙතනටත් ආරක්ෂිත අගය එකතු කළා */}
+                    <span className="text-[#F4F6FF]">{(Number(software.downloadCount) || 0).toLocaleString()}</span>
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
@@ -395,9 +389,9 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                       <span className="text-[#F4F6FF]">
-                        {software.averageRating > 0 ? Number(software.averageRating).toFixed(1) : 'New'}
+                        {Number(software.averageRating) > 0 ? Number(software.averageRating).toFixed(1) : 'New'}
                       </span>
-                      {software.reviewCount > 0 && (
+                      {Number(software.reviewCount) > 0 && (
                         <span className="text-[10px] text-[#A7ACB8]">({software.reviewCount})</span>
                       )}
                     </div>
