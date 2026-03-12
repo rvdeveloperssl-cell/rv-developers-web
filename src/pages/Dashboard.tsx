@@ -16,12 +16,9 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { softwareService } from '@/services/mockSoftwareService';
-import { licenseService } from '@/services/licenseService';
-import { paymentService } from '@/services/mockPaymentService';
-import type { Software, License, Purchase, Invoice } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
+// Types (සාමාන්‍යයෙන් මේවා types file එකකින් එන බැවින් මෙහි interface ලෙස තැබුවා)
 interface DashboardProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
 }
@@ -29,24 +26,28 @@ interface DashboardProps {
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [licenses, setLicenses] = useState<License[]>([]);
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [softwareMap, setSoftwareMap] = useState<Record<string, Software>>({});
+  const [licenses, setLicenses] = useState<any[]>([]);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [softwareMap, setSoftwareMap] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'licenses' | 'purchases' | 'invoices'>('overview');
 
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
   // --- CRITICAL FIX: Filter out licenses that don't have a software assigned ---
-  // මෙය කිරීමෙන් register වූ විගස හැදෙන "General License" එක UI එකේ පෙන්වීම නතර වේ.
   const activeSoftwareLicenses = useMemo(() => {
     return licenses.filter(lic => lic.softwareId !== null && lic.softwareId !== undefined && lic.softwareId !== "");
   }, [licenses]);
 
+  // දත්ත refresh කිරීම සඳහා useEffect එක user වෙනස් වන විට ක්‍රියාත්මක වේ
   useEffect(() => {
     loadDashboardData();
+    
+    // අවශ්‍ය නම් නිශ්චිත කාලයකට වරක් දත්ත refresh කිරීමට මෙය භාවිතා කළ හැක
+    const interval = setInterval(loadDashboardData, 30000); // තත්පර 30කට වරක් auto-sync
+    return () => clearInterval(interval);
   }, [user]);
 
   const loadDashboardData = async () => {
@@ -55,7 +56,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       return;
     }
     
-    setIsLoading(true);
     const rawApiUrl = import.meta.env.VITE_API_URL || "";
     const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
@@ -73,26 +73,33 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         return [];
       };
 
-      const licData = results[0].status === 'fulfilled' ? results[0].value : [];
-      setLicenses(getData(licData));
+      // Licenses
+      if (results[0].status === 'fulfilled') {
+        setLicenses(getData(results[0].value));
+      }
 
-      const purData = results[1].status === 'fulfilled' ? results[1].value : [];
-      setPurchases(getData(purData));
+      // Purchases
+      if (results[1].status === 'fulfilled') {
+        setPurchases(getData(results[1].value));
+      }
 
-      const invData = results[2].status === 'fulfilled' ? results[2].value : [];
-      setInvoices(getData(invData));
+      // Invoices
+      if (results[2].status === 'fulfilled') {
+        setInvoices(getData(results[2].value));
+      }
 
-      const softData = results[3].status === 'fulfilled' ? results[3].value : [];
-      const softwares = getData(softData);
-      
-      const softwareMapData: Record<string, Software> = {};
-      softores.forEach((s: Software) => {
-        softwareMapData[s.id] = s;
-      });
-      setSoftwareMap(softwareMapData);
+      // Software Mapping
+      if (results[3].status === 'fulfilled') {
+        const softwares = getData(results[3].value);
+        const softwareMapData: Record<string, any> = {};
+        softwares.forEach((s: any) => {
+          softwareMapData[s.id] = s;
+        });
+        setSoftwareMap(softwareMapData);
+      }
       
     } catch (error) {
-      console.error("MySQL Dashboard Load Error:", error);
+      console.error("Dashboard Sync Error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +124,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     {
       icon: Key,
       label: 'Active Licenses',
-      // හරිම software තියෙන ඒවා පමණක් count කරයි
       value: activeSoftwareLicenses.filter((l) => l.status === 'active').length || 0,
       color: 'bg-emerald-500/10 text-emerald-400',
     },
@@ -142,7 +148,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   ];
 
   const renderMasterKeySection = () => {
-    // Master Key එක හැමවිටම යූසර්ගේ Profile එකෙන් හෝ පළමු license record එකෙන් ගනී
     const mainKey = user?.licenseKey || (licenses.length > 0 ? licenses[0].licenseKey : "No Key Assigned");
     
     return (
@@ -218,7 +223,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
             {activeSoftwareLicenses.slice(0, 6).map((license) => {
               const software = softwareMap[license.softwareId];
-              if (!software) return null; // Software දත්ත නැත්නම් පෙන්වන්නේ නැත
+              if (!software) return null;
 
               return (
                 <div 
@@ -238,8 +243,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         {software?.category || 'Software'}
                       </span>
                       <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-xs text-emerald-400 font-medium capitalize">{license.status}</span>
+                        <div className={`w-2 h-2 rounded-full ${license.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                        <span className={`text-xs font-medium capitalize ${license.status === 'active' ? 'text-emerald-400' : 'text-red-400'}`}>{license.status}</span>
                       </div>
                     </div>
                   </div>
@@ -290,12 +295,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <img src={software?.imageUrl} className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <div className="text-[#F4F6FF] font-semibold text-sm">{software?.name}</div>
+                    <div className="text-[#F4F6FF] font-semibold text-sm">{software?.name || 'Legacy Asset'}</div>
                     <div className="text-[11px] text-[#A7ACB8]">{new Date(purchase.createdAt).toDateString()}</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[#F4F6FF] font-bold text-sm">LKR {purchase.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</div>
+                  <div className="text-[#F4F6FF] font-bold text-sm">LKR {Number(purchase.amount).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</div>
                   <div className={`text-[10px] font-bold uppercase tracking-tighter ${purchase.paymentStatus === 'verified' ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {purchase.paymentStatus}
                   </div>
@@ -403,14 +408,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <td className="py-5 px-4 text-[#A7ACB8] text-sm">
                     {new Date(purchase.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
-                  <td className="py-5 px-4 text-[#F4F6FF] font-bold">LKR {purchase.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</td>
+                  <td className="py-5 px-4 text-[#F4F6FF] font-bold">LKR {Number(purchase.amount).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</td>
                   <td className="py-5 px-4">
                     <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight ${purchase.paymentStatus === 'verified' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
                       {purchase.paymentStatus}
                     </span>
                   </td>
                   <td className="py-5 px-4 text-[#A7ACB8] text-right text-xs capitalize font-medium">
-                    {purchase.paymentMethod.replace('_', ' ')}
+                    {purchase.paymentMethod?.replace('_', ' ')}
                   </td>
                 </tr>
               );
@@ -434,7 +439,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div>
                 <div className="text-[#F4F6FF] font-bold">{invoice.invoiceNumber}</div>
                 <div className="text-[11px] text-[#A7ACB8] font-medium uppercase tracking-tighter">
-                  {software?.name} • {new Date(invoice.createdAt).toLocaleDateString()}
+                  {software?.name || 'Software Product'} • {new Date(invoice.createdAt).toLocaleDateString()}
                 </div>
               </div>
             </div>
@@ -596,7 +601,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         {new Date(selectedInvoice.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-4 px-2 text-right font-bold text-slate-700">
-                        LKR {selectedInvoice.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}
+                        LKR {Number(selectedInvoice.amount).toLocaleString('en-LK', { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                   </tbody>
@@ -606,11 +611,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <div className="w-full max-w-[240px] space-y-2">
                     <div className="flex justify-between text-xs text-slate-500">
                       <span>Subtotal:</span>
-                      <span>LKR {selectedInvoice.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+                      <span>LKR {Number(selectedInvoice.amount).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between border-t border-slate-200 pt-2 font-bold text-slate-800">
                       <span>Total Paid:</span>
-                      <span className="text-[#4F46E5]">LKR {selectedInvoice.amount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-[#4F46E5]">LKR {Number(selectedInvoice.amount).toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>
