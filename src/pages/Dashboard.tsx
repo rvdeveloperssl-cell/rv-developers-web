@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   Zap,
   X,
-  CheckCircle
+  CheckCircle,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { softwareService } from '@/services/mockSoftwareService';
@@ -120,7 +121,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         .filter((p) => p.paymentStatus === 'verified')
         .reduce((sum, p) => sum + Number(p.amount || 0), 0)
         .toLocaleString('en-LK', { 
-          minimumFractionDigits: 2,
+          minimumFractionDigits: 2, 
           maximumFractionDigits: 2 
         })}`,
       color: 'bg-purple-500/10 text-purple-400',
@@ -166,7 +167,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   const renderOverview = () => (
     <div className="space-y-10">
-      {/* Master Key Card Added Here */}
+      {/* Master Key Card */}
       {renderMasterKeySection()}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -212,7 +213,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             {licenses.slice(0, 6).map((license) => {
               const software = softwareMap[license.softwareId];
               return (
-                <div key={license.id} className="rv-panel group overflow-hidden p-0 border border-white/5 hover:border-[#4F46E5]/30 transition-all duration-300">
+                <div 
+                  key={license.id} 
+                  onClick={() => onNavigate('software-detail', { id: software?.id })}
+                  className="rv-panel group overflow-hidden p-0 border border-white/5 hover:border-[#4F46E5]/30 transition-all duration-300 cursor-pointer"
+                >
                   <div className="relative aspect-[16/9]">
                     <img 
                       src={software?.imageUrl} 
@@ -232,9 +237,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
 
                   <div className="p-5">
-                    <h3 className="text-lg font-bold text-[#F4F6FF] group-hover:text-[#4F46E5] transition-colors line-clamp-1">
-                      {software?.name || 'Loading...'}
-                    </h3>
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-bold text-[#F4F6FF] group-hover:text-[#4F46E5] transition-colors line-clamp-1">
+                            {software?.name || 'Loading...'}
+                        </h3>
+                        <ChevronRight className="w-5 h-5 text-[#A7ACB8] group-hover:text-[#4F46E5] group-hover:translate-x-1 transition-all" />
+                    </div>
                     
                     <div className="mt-4 space-y-3">
                       <div className="bg-black/40 rounded-lg p-3 border border-white/5 flex items-center justify-between">
@@ -245,17 +253,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                       </div>
 
                       <div className="flex gap-2">
-                        {software?.downloadUrl && (
-                          <button className="flex-1 rv-btn-primary py-2.5 text-xs flex items-center justify-center gap-2">
-                            <Download className="w-4 h-4" /> Download
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => onNavigate('software-detail', { id: software?.id })}
-                          className="px-3 py-2.5 rounded-lg bg-white/5 text-[#A7ACB8] hover:bg-white/10 hover:text-white transition-all border border-white/10"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
+                        <div className="flex-1 bg-[#4F46E5]/10 text-[#4F46E5] py-2.5 text-[10px] font-bold uppercase tracking-widest text-center rounded-lg border border-[#4F46E5]/20 group-hover:bg-[#4F46E5] group-hover:text-white transition-all">
+                          View & Download Assets
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -315,7 +315,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                <div key={license.id} className="rv-panel p-6 border border-white/5">
                  <div className="flex justify-between items-start mb-6">
                    <div className="flex gap-4">
-                     <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                     <div 
+                        onClick={() => onNavigate('software-detail', { id: software?.id })}
+                        className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl cursor-pointer"
+                      >
                         <img src={software?.imageUrl} className="w-full h-full object-cover" />
                      </div>
                      <div>
