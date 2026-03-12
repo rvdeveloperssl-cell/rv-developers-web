@@ -29,25 +29,23 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  // URL සහ Slug සඳහා වෙනම temporary states
-  const [tempSlug, setTempSlug] = useState('');
-  const [tempImageUrl, setTempImageUrl] = useState('');
-
   const [formData, setFormData] = useState({
     name: '',
-    productSlug: '',
+    productSlug: '', 
     description: '',
     price: 0,
     version: '1.0.0',
     category: '',
     imageUrl: '',
     systemRequirements: '',
-    downloadUrl: '',
-    mobileAppUrl: '',
-    extraLink: '',
+    downloadUrl: '', 
+    mobileAppUrl: '', 
+    extraLink: '',    
     isFree: false,
     isActive: true,
     features: [''],
+    // අලුතින් එකතු කළ ලිංක් හබ් එක (Link + Icon/Image)
+    productLinks: [{ label: '', url: '', iconUrl: '' }] 
   });
 
   useEffect(() => {
@@ -91,7 +89,8 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
         body: JSON.stringify({
           ...formData,
           price: formData.isFree ? 0 : formData.price,
-          features: formData.features.filter((f) => f.trim() !== '')
+          features: formData.features.filter((f) => f.trim() !== ''),
+          productLinks: formData.productLinks.filter((l) => l.url.trim() !== '')
         }),
       });
 
@@ -144,9 +143,8 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       isFree: false,
       isActive: true,
       features: [''],
+      productLinks: [{ label: '', url: '', iconUrl: '' }]
     });
-    setTempSlug('');
-    setTempImageUrl('');
     setEditingSoftware(null);
   };
 
@@ -167,22 +165,9 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
       isFree: s.isFree === 1 || s.isFree === true,
       isActive: s.isActive === 1 || s.isActive === true,
       features: s.features ? (typeof s.features === 'string' ? JSON.parse(s.features) : s.features) : [''],
+      productLinks: s.productLinks ? (typeof s.productLinks === 'string' ? JSON.parse(s.productLinks) : s.productLinks) : [{ label: '', url: '', iconUrl: '' }]
     });
-    setTempSlug(s.productSlug || '');
-    setTempImageUrl(s.imageUrl || '');
     setIsDialogOpen(true);
-  };
-
-  // + Button එක එබූ විට දත්ත Update කරන Functions
-  const applySlug = () => {
-    const slug = tempSlug.toLowerCase().replace(/\s+/g, '-');
-    setFormData({ ...formData, productSlug: slug });
-    toast({ title: "Slug Updated", description: `URL will be /software/${slug}` });
-  };
-
-  const applyImageUrl = () => {
-    setFormData({ ...formData, imageUrl: tempImageUrl });
-    toast({ title: "Image Applied", description: "Cover image preview updated." });
   };
 
   const filteredSoftware = software.filter(
@@ -221,6 +206,7 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
               </DialogHeader>
               
               <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+                {/* Basic Info Group */}
                 <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Display Name</label>
@@ -234,76 +220,42 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Product Slug</label>
-                    <div className="flex gap-2">
-                        <input
-                        type="text"
-                        value={tempSlug}
-                        onChange={(e) => setTempSlug(e.target.value)}
-                        className="rv-input h-11 border-indigo-500/30"
-                        placeholder="e.g. pos-pro-ultra"
-                        />
-                        <button 
-                            type="button"
-                            onClick={applySlug}
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 rounded-xl transition-all"
-                        >
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    </div>
+                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Product Slug (URL Path)</label>
+                    <input
+                      type="text"
+                      value={formData.productSlug}
+                      onChange={(e) => setFormData({ ...formData, productSlug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                      className="rv-input h-11 border-indigo-500/30 focus:border-indigo-500"
+                      placeholder="e.g. pos-pro-ultra"
+                      required
+                    />
                   </div>
                 </div>
 
-                {/* Cover Image URL with Preview */}
+                {/* Description */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Cover Image Link</label>
-                  <div className="flex gap-4 items-start">
-                    <div className="flex-1 flex gap-2">
-                        <input
-                        type="url"
-                        value={tempImageUrl}
-                        onChange={(e) => setTempImageUrl(e.target.value)}
-                        className="rv-input h-11 bg-[#05060B]"
-                        placeholder="https://imgur.com/your-image.jpg"
-                        />
-                        <button 
-                            type="button"
-                            onClick={applyImageUrl}
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 rounded-xl transition-all"
-                        >
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    </div>
-                    {formData.imageUrl && (
-                        <div className="w-20 h-11 rounded-lg overflow-hidden border border-white/10 ring-2 ring-indigo-500/20">
-                            <img src={formData.imageUrl} className="w-full h-full object-cover" alt="Preview" />
-                        </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Description</label>
+                  <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Description & Release Notes</label>
                   <div className="relative">
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="rv-input min-h-[100px] py-4 pr-12"
-                      placeholder="Describe the software functionality..."
+                      className="rv-input min-h-[120px] py-4 pr-12"
+                      placeholder="Describe the software functionality and updates..."
                       required
                     />
                     <Smile className="absolute right-4 top-4 w-5 h-5 text-indigo-400 opacity-40" />
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-5">
+                {/* Technical Specs */}
+                <div className="grid md:grid-cols-3 gap-5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Build Version</label>
                     <input
                       type="text"
                       value={formData.version}
                       onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                      className="rv-input h-11"
+                      className="rv-input"
                       placeholder="1.0.0"
                     />
                   </div>
@@ -313,50 +265,104 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                       type="text"
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="rv-input h-11"
+                      className="rv-input"
                       placeholder="Enterprise / Utility"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#A7ACB8] uppercase tracking-wider">Cover Image URL</label>
+                    <input
+                      type="url"
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      className="rv-input"
+                      placeholder="https://image-link.com/cover.jpg"
                     />
                   </div>
                 </div>
 
-                {/* Package Download Links Hub */}
+                {/* Distribution Asset Hub (Enhanced with Add Button and Image URLs) */}
                 <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Download className="w-4 h-4 text-indigo-400" />
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-200">Distribution Asset Hub</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Download className="w-4 h-4 text-indigo-400" />
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-indigo-200">Distribution Asset Hub</h3>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        productLinks: [...formData.productLinks, { label: '', url: '', iconUrl: '' }]
+                      })}
+                      className="flex items-center gap-1 text-[10px] font-bold bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/30 transition-all uppercase"
+                    >
+                      <Plus className="w-3 h-3" /> Add Resource Link
+                    </button>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Globe className="w-3 h-3" /> Desktop Setup Link</div>
-                      <input
-                        type="url"
-                        value={formData.downloadUrl}
-                        onChange={(e) => setFormData({ ...formData, downloadUrl: e.target.value })}
-                        className="rv-input bg-[#05060B] h-10"
-                        placeholder="https://cdn.rv.lk/setup.exe"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Smartphone className="w-3 h-3" /> Mobile App Link</div>
-                      <input
-                        type="url"
-                        value={formData.mobileAppUrl}
-                        onChange={(e) => setFormData({ ...formData, mobileAppUrl: e.target.value })}
-                        className="rv-input bg-[#05060B] h-10"
-                        placeholder="https://playstore.com/app"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-[#A7ACB8] uppercase"><Info className="w-3 h-3" /> Docs / Extra Link</div>
-                      <input
-                        type="url"
-                        value={formData.extraLink}
-                        onChange={(e) => setFormData({ ...formData, extraLink: e.target.value })}
-                        className="rv-input bg-[#05060B] h-10"
-                        placeholder="User Manual Link"
-                      />
-                    </div>
+                    {formData.productLinks.map((link, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-xl bg-[#05060B] border border-white/5 relative group">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-[#A7ACB8] uppercase">Link Label</label>
+                          <input
+                            type="text"
+                            value={link.label}
+                            onChange={(e) => {
+                              const newLinks = [...formData.productLinks];
+                              newLinks[index].label = e.target.value;
+                              setFormData({ ...formData, productLinks: newLinks });
+                            }}
+                            className="rv-input h-9 text-xs"
+                            placeholder="e.g. Download EXE"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-[#A7ACB8] uppercase">Resource URL</label>
+                          <input
+                            type="url"
+                            value={link.url}
+                            onChange={(e) => {
+                              const newLinks = [...formData.productLinks];
+                              newLinks[index].url = e.target.value;
+                              setFormData({ ...formData, productLinks: newLinks });
+                            }}
+                            className="rv-input h-9 text-xs"
+                            placeholder="https://..."
+                          />
+                        </div>
+                        <div className="space-y-1 pr-8">
+                          <label className="text-[9px] font-bold text-[#A7ACB8] uppercase">Icon/Image URL</label>
+                          <div className="relative">
+                            <input
+                              type="url"
+                              value={link.iconUrl}
+                              onChange={(e) => {
+                                const newLinks = [...formData.productLinks];
+                                newLinks[index].iconUrl = e.target.value;
+                                setFormData({ ...formData, productLinks: newLinks });
+                              }}
+                              className="rv-input h-9 text-xs pl-8"
+                              placeholder="Optional Image URL"
+                            />
+                            <ImageIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-indigo-400/50" />
+                          </div>
+                        </div>
+                        
+                        {formData.productLinks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newLinks = formData.productLinks.filter((_, i) => i !== index);
+                              setFormData({ ...formData, productLinks: newLinks });
+                            }}
+                            className="absolute -right-2 -top-2 p-1.5 rounded-full bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -510,9 +516,15 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                       </td>
                       <td className="py-5 px-6">
                         <div className="flex gap-2">
-                          {s.downloadUrl && <Download className="w-4 h-4 text-blue-400" title="Desktop Link" />}
-                          {s.mobileAppUrl && <Smartphone className="w-4 h-4 text-purple-400" title="Mobile Link" />}
-                          {s.extraLink && <ExternalLink className="w-4 h-4 text-orange-400" title="Docs Link" />}
+                          {s.productLinks && (typeof s.productLinks === 'string' ? JSON.parse(s.productLinks) : s.productLinks).map((l: any, i: number) => (
+                            <div key={i} className="relative group/icon">
+                              {l.iconUrl ? (
+                                <img src={l.iconUrl} className="w-5 h-5 rounded object-contain opacity-60 hover:opacity-100 transition-opacity" alt={l.label} title={l.label} />
+                              ) : (
+                                <ExternalLink className="w-4 h-4 text-indigo-400/60 hover:text-indigo-400" title={l.label} />
+                              )}
+                            </div>
+                          ))}
                         </div>
                       </td>
                       <td className="py-5 px-6">
@@ -535,6 +547,12 @@ export default function AdminSoftware({ onNavigate: _onNavigate }: AdminSoftware
                   ))}
                 </tbody>
               </table>
+              {filteredSoftware.length === 0 && (
+                <div className="p-20 text-center">
+                  <Package className="w-12 h-12 text-white/5 mx-auto mb-4" />
+                  <p className="text-[#A7ACB8]">No packages found in the database.</p>
+                </div>
+              )}
             </div>
           )}
         </div>
