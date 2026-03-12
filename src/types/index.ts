@@ -15,6 +15,7 @@ export interface User {
 export interface Software {
   id: string;
   name: string;
+  productSlug: string; // අලුතින් එකතු කළා
   description: string;
   features: string[];
   price: number;
@@ -24,7 +25,14 @@ export interface Software {
   demoVideoUrl?: string;
   systemRequirements: string;
   isFree: boolean;
-  downloadUrl?: string;
+  
+  // පරණ downloadUrl එක වෙනුවට අලුත් Object Array එක
+  productLinks: {
+    label: string;
+    url: string;
+    iconUrl?: string;
+  }[];
+
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
