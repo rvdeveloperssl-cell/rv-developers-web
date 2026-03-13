@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { 
   ArrowLeft, Download, ShoppingCart, Check, Star, 
-  Play, Monitor, Shield, Loader2, Send, MessageSquare 
+  Play, Monitor, Shield, Loader2, Send, MessageSquare,
+  Package, ChevronRight
 } from 'lucide-react';
 import { softwareService } from '@/services/mockSoftwareService';
 import type { Software } from '@/types';
@@ -208,14 +209,35 @@ function SoftwareReviews({ softwareId }: { softwareId: string }) {
 export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetailProps) {
   const [software, setSoftware] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasPurchased, setHasPurchased] = useState(false); // නව කොටස: මිලදී ගෙන ඇත්දැයි බැලීමට
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     if (softwareId) {
       loadSoftware();
     }
   }, [softwareId]);
+
+  // පරිශීලකයා මිලදී ගෙන ඇත්දැයි පරීක්ෂා කිරීම
+  useEffect(() => {
+    if (isAuthenticated && user && softwareId) {
+      checkPurchaseStatus();
+    }
+  }, [isAuthenticated, user, softwareId]);
+
+  const checkPurchaseStatus = async () => {
+    try {
+      const res = await fetch(`https://api.rvdevelopers.lk/api/licenses/user/${user?.id}`);
+      if (res.ok) {
+        const licenses = await res.json();
+        const isOwned = licenses.some((lic: any) => lic.softwareId === softwareId && lic.status === 'active');
+        setHasPurchased(isOwned);
+      }
+    } catch (error) {
+      console.error("License Check Error:", error);
+    }
+  };
 
   const loadSoftware = async () => {
     setIsLoading(true);
@@ -282,6 +304,50 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
 
   if (!software) return null;
 
+  // --- නව කොටස: මිලදී ගත් අයට පෙන්වන Download Links (Asset Hub) ---
+  const renderAssetHub = () => {
+    let links = [];
+    try {
+      links = typeof software.productLinks === 'string' 
+        ? JSON.parse(software.productLinks) 
+        : (software.productLinks || []);
+    } catch (e) {
+      links = [];
+    }
+
+    return (
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Package className="w-4 h-4 text-emerald-400" />
+          <span className="text-[10px] font-black text-white uppercase tracking-widest">Asset Downloads</span>
+        </div>
+        {links.length > 0 ? (
+          links.map((link: any, index: number) => (
+            <a
+              key={index}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                  <Download className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div className="text-xs font-bold text-[#F4F6FF] group-hover:text-emerald-400">
+                  {link.label || 'Download File'}
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#A7ACB8]" />
+            </a>
+          ))
+        ) : (
+          <p className="text-[10px] text-[#A7ACB8] italic">No digital assets linked to this product.</p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="rv-container">
@@ -298,6 +364,14 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
             <div className="relative aspect-video rounded-2xl overflow-hidden">
               <img src={software.imageUrl} alt={software.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E16] via-transparent to-transparent" />
+              
+              {/* මිලදී ගෙන ඇත්නම් පෙන්වන badge එකක් */}
+              {hasPurchased && (
+                <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-tighter flex items-center gap-2 shadow-lg">
+                  <Check className="w-3 h-3" /> Licensed Product
+                </div>
+              )}
+
               {software.demoVideoUrl && (
                 <button className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-[#4F46E5] flex items-center justify-center hover:scale-110 transition-transform">
                   <Play className="w-6 h-6 text-white ml-1" />
@@ -331,8 +405,10 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
             <div className="rv-panel p-6">
               <h2 className="text-xl font-semibold text-[#F4F6FF] mb-4">System Requirements</h2>
               <div className="flex items-start gap-3">
-                <Monitor className="w-5 h-5 text-[#4F46E5] mt-0.5" />
-                <p className="text-[#A7ACB8]">{software.systemRequirements}</p>
+                <div className="w-8 h-8 rounded-lg bg-[#4F46E5]/10 flex items-center justify-center flex-shrink-0">
+                  <Monitor className="w-4 h-4 text-[#4F46E5]" />
+                </div>
+                <p className="text-[#A7ACB8] text-sm leading-relaxed">{software.systemRequirements || 'No specific requirements mentioned.'}</p>
               </div>
             </div>
 
@@ -349,21 +425,32 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                   </>
                 ) : (
                   <>
-                    {/* මෙතනට ?. සහ fallback අගය එකතු කළා */}
                     <span className="text-4xl font-bold text-[#F4F6FF]">LKR {(Number(software.price) || 0).toLocaleString()}</span>
                     <p className="text-sm text-[#A7ACB8] mt-2">One-time purchase</p>
                   </>
                 )}
               </div>
 
-              {software.isFree ? (
-                <button onClick={handleDownload} className="rv-btn-primary w-full flex items-center justify-center gap-2">
-                  <Download className="w-4 h-4" /> Download Now
-                </button>
+              {/* මෙතන තමයි Buy button එක හෝ Download links මාරු වෙන්නේ */}
+              {hasPurchased ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                    <p className="text-emerald-400 text-xs font-bold">You own this software</p>
+                  </div>
+                  {renderAssetHub()}
+                </div>
               ) : (
-                <button onClick={handlePurchase} className="rv-btn-primary w-full flex items-center justify-center gap-2">
-                  <ShoppingCart className="w-4 h-4" /> Buy Now
-                </button>
+                <>
+                  {software.isFree ? (
+                    <button onClick={handleDownload} className="rv-btn-primary w-full flex items-center justify-center gap-2">
+                      <Download className="w-4 h-4" /> Download Now
+                    </button>
+                  ) : (
+                    <button onClick={handlePurchase} className="rv-btn-primary w-full flex items-center justify-center gap-2">
+                      <ShoppingCart className="w-4 h-4" /> Buy Now
+                    </button>
+                  )}
+                </>
               )}
 
               <div className="mt-6 pt-6 border-t border-[rgba(244,246,255,0.08)] space-y-4">
@@ -380,7 +467,6 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-[#A7ACB8]">Downloads</span>
-                    {/* මෙතනටත් ආරක්ෂිත අගය එකතු කළා */}
                     <span className="text-[#F4F6FF]">{(Number(software.downloadCount) || 0).toLocaleString()}</span>
                   </div>
 
