@@ -227,17 +227,23 @@ export default function SoftwareDetail({ softwareId, onNavigate }: SoftwareDetai
   }, [isAuthenticated, user, softwareId]);
 
   const checkPurchaseStatus = async () => {
-    try {
-      const res = await fetch(`https://api.rvdevelopers.lk/api/licenses/user/${user?.id}`);
-      if (res.ok) {
-        const licenses = await res.json();
-        const isOwned = licenses.some((lic: any) => lic.softwareId === softwareId && lic.status === 'active');
-        setHasPurchased(isOwned);
-      }
-    } catch (error) {
-      console.error("License Check Error:", error);
+  if (!user?.id || !softwareId) return;
+  
+  try {
+    const res = await fetch(`https://api.rvdevelopers.lk/api/licenses/user/${user.id}`);
+    if (res.ok) {
+      const licenses = await res.json();
+      // String() පාවිච්චි කරලා ID දෙකම String විදිහට සසඳන්න
+      const isOwned = licenses.some((lic: any) => 
+        String(lic.softwareId) === String(softwareId) && lic.status === 'active'
+      );
+      setHasPurchased(isOwned);
+      console.log("Ownership Status:", isOwned); // Debug කිරීමට මේක දාන්න
     }
-  };
+  } catch (error) {
+    console.error("License Check Error:", error);
+  }
+};
 
   const loadSoftware = async () => {
     setIsLoading(true);
