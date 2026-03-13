@@ -437,7 +437,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <FileText className="w-6 h-6 text-[#4F46E5]" />
               </div>
               <div>
-                <div className="text-[#F4F6FF] font-bold">{invoice.invoiceNumber}</div>
+                <div className="text-[#F4F6FF] font-bold">{invoice.invoiceId}</div>
                 <div className="text-[11px] text-[#A7ACB8] font-medium uppercase tracking-tighter">
                   {software?.name || 'Software Product'} • {new Date(invoice.createdAt).toLocaleDateString()}
                 </div>
@@ -561,7 +561,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                   <div className="text-right">
                     <h1 className="text-3xl font-light text-slate-400 mb-1 tracking-widest">INVOICE</h1>
-                    <p className="text-sm font-bold text-slate-700">#{selectedInvoice.invoiceNumber}</p>
+                    <p className="text-sm font-bold text-slate-700">#{selectedInvoice.invoiceId}</p>
                     <p className="text-xs text-slate-500 mt-1">Invoice Date: {new Date(selectedInvoice.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
