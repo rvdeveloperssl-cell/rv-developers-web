@@ -44,8 +44,8 @@ export default function ContactSection() {
   const contactInfo = [
     {
       icon: MapPin,
-      title: 'Colombo Office',
-      details: '123 Tech Road, Colombo 03, Sri Lanka',
+      title: 'Head Office',
+      details: 'No 55 Kalugalla Road, Nugawela ,Kandy, Sri Lanka',
     },
     {
       icon: Mail,
