@@ -141,8 +141,11 @@ export default function Login({ onNavigate }: LoginProps) {
               )}
             </button>
 
-            {/* Demo Credentials*/} 
-              
+            {/* old Demo Credentials now rv developers name*/} 
+             <div className="pt-4 border-t border-[rgba(244,246,255,0.08)]">
+              <p className="text-xs text-[#A7ACB8] text-center mb-2">RV DEVELOPERS...</p>
+              <div className="text-xs text-[#A7ACB8] text-center space-y-1">
+               
               </div>
             </div>
           </form>
